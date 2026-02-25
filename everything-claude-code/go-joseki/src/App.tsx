@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { JosekiPage } from './pages/JosekiPage';
+import { PracticePage } from './pages/PracticePage';
+import { QuizPage } from './pages/QuizPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 function App() {
   return (
@@ -25,6 +28,24 @@ function App() {
               >
                 定式库
               </Link>
+              <Link
+                to="/practice"
+                className="text-ogs-muted hover:text-ogs-accent transition-colors"
+              >
+                练习
+              </Link>
+              <Link
+                to="/quiz"
+                className="text-ogs-muted hover:text-ogs-accent transition-colors"
+              >
+                测验
+              </Link>
+              <Link
+                to="/dashboard"
+                className="text-ogs-muted hover:text-ogs-accent transition-colors"
+              >
+                进度
+              </Link>
             </div>
           </div>
         </nav>
@@ -33,6 +54,9 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/joseki" element={<JosekiPage />} />
+          <Route path="/practice" element={<PracticePage />} />
+          <Route path="/quiz" element={<QuizPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
         </Routes>
       </div>
     </BrowserRouter>
