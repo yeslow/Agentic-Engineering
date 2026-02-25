@@ -128,7 +128,23 @@ export function PracticeMode() {
     }
   };
 
-  if (!selectedJoseki || !session) return null;
+  if (!selectedJoseki) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-ogs-border p-8 text-center">
+        <div className="text-6xl mb-4">📚</div>
+        <h2 className="text-xl font-bold text-ogs-text mb-2">请选择要练习的定式</h2>
+        <p className="text-ogs-muted mb-4">前往定式库选择一个定式开始练习</p>
+        <a
+          href="/joseki"
+          className="inline-block px-4 py-2 bg-ogs-accent text-white rounded hover:bg-ogs-accent/90 transition-colors"
+        >
+          去定式库
+        </a>
+      </div>
+    );
+  }
+
+  if (!session) return null;
 
   const accuracy = calculateAccuracy(session, selectedJoseki);
   const progress = (session.currentMoveIndex / selectedJoseki.mainLine.length) * 100;
