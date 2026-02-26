@@ -32,6 +32,7 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     trialStones,
     trialMoveCount,
     trialCapturedStones,
+    enterTrialMode,
   } = useBoardStore();
 
   // Determine the color for trial move (based on current board state + trial moves)
@@ -174,17 +175,23 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
       const dims = calculateBoardDimensions(size, board.size);
       const coord = pixelToCoordinate({ x, y }, dims);
 
-      if (coord) {
-        if (gameMode === 'trial') {
-          // In trial mode, play trial move
-          playTrialMove(coord);
-        } else {
-          // In battle mode, play normal move
-          playMove(coord);
+      if (!coord) return;
+
+      // Check if there are more moves in the history (viewing mode)
+      const hasNextMoveInHistory = board.currentMoveNumber < board.moveHistory.length;
+
+      if (hasNextMoveInHistory) {
+        // There are remaining moves in the kifu, enter trial mode
+        if (gameMode !== 'trial') {
+          enterTrialMode();
         }
+        playTrialMove(coord);
+      } else {
+        // No more moves in history, play normal battle mode move
+        playMove(coord);
       }
     },
-    [board.size, playMove, playTrialMove, size, gameMode]
+    [board.size, board.currentMoveNumber, board.moveHistory.length, gameMode, enterTrialMode, playMove, playTrialMove, size]
   );
 
   // Handle mouse move

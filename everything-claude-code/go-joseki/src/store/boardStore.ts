@@ -380,10 +380,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     // Determine current color based on move count
     const currentColor = targetIndex % 2 === 0 ? 'black' : 'white';
 
-    // Auto enter trial mode when navigating to middle of game
+    // Check if viewing historical position (not at the end of move history)
     const isViewing = targetIndex < board.moveHistory.length;
-    const newGameMode: GameMode = isViewing ? 'trial' : 'battle';
 
+    // Keep battle mode when navigating, GoBoard click handler will decide
+    // whether to enter trial mode based on if there are more moves in history
     set({
       board: {
         ...tempBoard,
@@ -393,7 +394,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       currentColor,
       currentViewMove: targetIndex,
       isViewingMode: isViewing,
-      gameMode: newGameMode,
+      gameMode: 'battle', // Always stay in battle mode when navigating
       trialStones: { black: [], white: [] }, // Clear trial stones when navigating
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },

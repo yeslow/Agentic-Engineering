@@ -296,8 +296,8 @@ describe('BoardStore Game Mode', () => {
     });
   });
 
-  describe('auto enter trial mode when navigating', () => {
-    it('should auto enter trial mode when navigating to middle of game', () => {
+  describe('viewing mode when navigating', () => {
+    it('should stay in battle mode when navigating to middle of game', () => {
       const store = useBoardStore.getState();
       store.initBoard(19);
       store.playMove([3, 3]);
@@ -309,8 +309,9 @@ describe('BoardStore Game Mode', () => {
       // Navigate to middle
       store.goToMove(1);
 
-      // Should auto enter trial mode
-      expect(useBoardStore.getState().gameMode).toBe('trial');
+      // Should stay in battle mode, trial mode is only entered on click if there are more moves
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+      expect(useBoardStore.getState().isViewingMode).toBe(true);
     });
 
     it('should stay in battle mode when at the end of moves', () => {
@@ -373,11 +374,16 @@ describe('BoardStore Navigation', () => {
       store.playMove([15, 15]);
       store.goToPrevious();
 
+      // After navigating back, should be in viewing mode but still battle mode
       expect(useBoardStore.getState().isViewingMode).toBe(true);
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+
+      // GoBoard click handler will decide to enter trial mode if there are more moves
+      // Manually enter trial mode to simulate the new behavior
+      store.enterTrialMode();
       expect(useBoardStore.getState().gameMode).toBe('trial');
 
-      // In trial mode, playMove should be rejected
-      // User needs to exit trial mode first
+      // Exit trial mode and play a move
       store.exitTrialMode();
       expect(useBoardStore.getState().gameMode).toBe('battle');
 
