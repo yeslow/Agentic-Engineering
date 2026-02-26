@@ -1,0 +1,232 @@
+import { describe, it, expect } from 'vitest';
+import { boardToSgf, sgfToBoard, isValidSgf, getSgfMetadata } from './sgf';
+
+describe('SGF Serialization', () => {
+  describe('boardToSgf', () => {
+    it('should convert empty board to SGF', () => {
+      const board = {
+        size: 19 as const,
+        stones: { black: [] as [number, number][], white: [] as [number, number][] },
+        captures: { black: 0, white: 0 },
+        koPoint: null,
+        lastMove: null,
+        moveHistory: [],
+        currentMoveNumber: 0,
+      };
+      const sgf = boardToSgf(board);
+
+      expect(sgf).toContain('(;');
+      expect(sgf).toContain('FF[4]');
+      expect(sgf).toContain('GM[1]');
+      expect(sgf).toContain('SZ[19]');
+      expect(sgf).toContain('AP[GoJoseki]');
+      expect(sgf).toContain(')');
+    });
+
+    it('should convert board with moves to SGF', () => {
+      const board = {
+        size: 19 as const,
+        stones: {
+          black: [[3, 3], [3, 15]] as [number, number][],
+          white: [[15, 15]] as [number, number][]
+        },
+        captures: { black: 0, white: 0 },
+        koPoint: null,
+        lastMove: [15, 15] as [number, number],
+        moveHistory: [
+          { coordinate: [3, 3] as [number, number], color: 'black' as const, moveNumber: 1 },
+          { coordinate: [15, 15] as [number, number], color: 'white' as const, moveNumber: 2 },
+          { coordinate: [3, 15] as [number, number], color: 'black' as const, moveNumber: 3 },
+        ],
+        currentMoveNumber: 3,
+      };
+      const sgf = boardToSgf(board);
+
+      expect(sgf).toContain(';B[dd]'); // 3,3 = dd in SGF
+      expect(sgf).toContain(';W[pp]'); // 15,15 = pp in SGF
+      expect(sgf).toContain(';B[dp]'); // 3,15 = dp in SGF
+    });
+
+    it('should handle 9x9 board', () => {
+      const board = {
+        size: 9 as const,
+        stones: { black: [], white: [] },
+        captures: { black: 0, white: 0 },
+        koPoint: null,
+        lastMove: null,
+        moveHistory: [],
+        currentMoveNumber: 0,
+      };
+      const sgf = boardToSgf(board);
+      expect(sgf).toContain('SZ[9]');
+    });
+
+    it('should handle 13x13 board', () => {
+      const board = {
+        size: 13 as const,
+        stones: { black: [], white: [] },
+        captures: { black: 0, white: 0 },
+        koPoint: null,
+        lastMove: null,
+        moveHistory: [],
+        currentMoveNumber: 0,
+      };
+      const sgf = boardToSgf(board);
+      expect(sgf).toContain('SZ[13]');
+    });
+
+    it('should include capture information', () => {
+      const board = {
+        size: 19 as const,
+        stones: { black: [], white: [] },
+        captures: { black: 5, white: 3 },
+        koPoint: null,
+        lastMove: null,
+        moveHistory: [],
+        currentMoveNumber: 0,
+      };
+      const sgf = boardToSgf(board);
+      expect(sgf).toContain('C[Black captures: 5, White captures: 3]');
+    });
+  });
+
+  describe('sgfToBoard', () => {
+    it('should parse empty board SGF', () => {
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki])';
+      const board = sgfToBoard(sgf);
+
+      expect(board.size).toBe(19);
+      expect(board.stones.black).toHaveLength(0);
+      expect(board.stones.white).toHaveLength(0);
+      expect(board.currentMoveNumber).toBe(0);
+    });
+
+    it('should parse SGF with moves', () => {
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[pp];B[dp])';
+      const board = sgfToBoard(sgf);
+
+      expect(board.size).toBe(19);
+      expect(board.moveHistory).toHaveLength(3);
+      expect(board.stones.black).toHaveLength(2);
+      expect(board.stones.white).toHaveLength(1);
+    });
+
+    it('should parse 9x9 board SGF', () => {
+      const sgf = '(;FF[4]GM[1]SZ[9]AP[GoJoseki];B[dd];W[ee])';
+      const board = sgfToBoard(sgf);
+
+      expect(board.size).toBe(9);
+    });
+
+    it('should handle moves with comments', () => {
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd]C[Good move];W[pp])';
+      const board = sgfToBoard(sgf);
+
+      expect(board.moveHistory).toHaveLength(2);
+      expect(board.moveHistory[0].comment).toBe('Good move');
+    });
+
+    it('should reconstruct board state correctly', () => {
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp];B[pd];W[dc])';
+      const board = sgfToBoard(sgf);
+
+      expect(board.currentMoveNumber).toBe(4);
+      expect(board.stones.black).toHaveLength(2);
+      expect(board.stones.white).toHaveLength(2);
+      // dc in SGF = [3, 2] in coordinates
+      expect(board.lastMove).toEqual([3, 2]);
+    });
+  });
+
+  describe('round-trip', () => {
+    it('should preserve board state after serialize and deserialize', () => {
+      const original = {
+        size: 19 as const,
+        stones: {
+          black: [[3, 3], [3, 15]] as [number, number][],
+          white: [[15, 15], [15, 3]] as [number, number][]
+        },
+        captures: { black: 0, white: 0 },
+        koPoint: null,
+        lastMove: [15, 3] as [number, number],
+        moveHistory: [
+          { coordinate: [3, 3] as [number, number], color: 'black' as const, moveNumber: 1 },
+          { coordinate: [15, 15] as [number, number], color: 'white' as const, moveNumber: 2 },
+          { coordinate: [3, 15] as [number, number], color: 'black' as const, moveNumber: 3 },
+          { coordinate: [15, 3] as [number, number], color: 'white' as const, moveNumber: 4 },
+        ],
+        currentMoveNumber: 4,
+      };
+
+      const sgf = boardToSgf(original);
+      const restored = sgfToBoard(sgf);
+
+      expect(restored.size).toBe(original.size);
+      expect(restored.moveHistory.length).toBe(original.moveHistory.length);
+      expect(restored.stones.black.length).toBe(original.stones.black.length);
+      expect(restored.stones.white.length).toBe(original.stones.white.length);
+    });
+
+    it('should preserve board state for 9x9 game', () => {
+      const original = {
+        size: 9 as const,
+        stones: {
+          black: [[2, 2], [2, 6]] as [number, number][],
+          white: [[6, 6]] as [number, number][]
+        },
+        captures: { black: 0, white: 0 },
+        koPoint: null,
+        lastMove: [6, 6] as [number, number],
+        moveHistory: [
+          { coordinate: [2, 2] as [number, number], color: 'black' as const, moveNumber: 1 },
+          { coordinate: [6, 6] as [number, number], color: 'white' as const, moveNumber: 2 },
+          { coordinate: [2, 6] as [number, number], color: 'black' as const, moveNumber: 3 },
+        ],
+        currentMoveNumber: 3,
+      };
+
+      const sgf = boardToSgf(original);
+      const restored = sgfToBoard(sgf);
+
+      expect(restored.size).toBe(9);
+      expect(restored.moveHistory.length).toBe(3);
+    });
+  });
+
+  describe('isValidSgf', () => {
+    it('should return true for valid SGF', () => {
+      expect(isValidSgf('(;FF[4]GM[1]SZ[19])')).toBe(true);
+      expect(isValidSgf('(;FF[4]GM[1]SZ[9];B[dd])')).toBe(true);
+    });
+
+    it('should return false for invalid input', () => {
+      expect(isValidSgf('')).toBe(false);
+      expect(isValidSgf('not sgf')).toBe(false);
+    });
+  });
+
+  describe('getSgfMetadata', () => {
+    it('should extract metadata from SGF', () => {
+      const sgf = '(;FF[4]GM[1]SZ[13];B[dd];W[ee];B[cc])';
+      const metadata = getSgfMetadata(sgf);
+
+      expect(metadata.size).toBe(13);
+      expect(metadata.moveCount).toBe(3);
+      expect(metadata.hasCaptures).toBe(false);
+    });
+  });
+});
+
+describe('SGF Coordinate Conversion', () => {
+  it('should handle corner positions', () => {
+    const sgf = '(;FF[4]GM[1]SZ[19];B[aa])';
+    const board = sgfToBoard(sgf);
+    expect(board.stones.black[0]).toEqual([0, 0]);
+  });
+
+  it('should handle opposite corner', () => {
+    const sgf = '(;FF[4]GM[1]SZ[19];B[ss])';
+    const board = sgfToBoard(sgf);
+    expect(board.stones.black[0]).toEqual([18, 18]);
+  });
+});

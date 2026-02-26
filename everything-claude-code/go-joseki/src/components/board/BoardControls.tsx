@@ -3,10 +3,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Undo2, Trash2 } from 'lucide-react';
+import { Undo2, Trash2, Download, Upload } from 'lucide-react';
+import { exportKifu, importKifuWithPicker } from '../../lib/kifuManager';
+import { useState } from 'react';
 
 export function BoardControls() {
-  const { resetBoard, undo, currentColor, board } = useBoardStore();
+  const { resetBoard, undo, currentColor, board, loadBoard } = useBoardStore();
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const handleExport = () => {
+    exportKifu(board);
+  };
+
+  const handleImport = async () => {
+    try {
+      setImportError(null);
+      const newBoard = await importKifuWithPicker();
+      loadBoard(newBoard);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '导入失败';
+      setImportError(message);
+      console.error('Failed to import kifu:', error);
+    }
+  };
 
   return (
     <Card>
@@ -41,6 +60,12 @@ export function BoardControls() {
           <Badge variant="secondary">{board.captures.white}</Badge>
         </div>
 
+        {importError && (
+          <Badge variant="destructive" className="w-full justify-center">
+            {importError}
+          </Badge>
+        )}
+
         <Separator />
 
         <div className="flex gap-2">
@@ -62,6 +87,28 @@ export function BoardControls() {
           >
             <Trash2 className="h-4 w-4 mr-1" />
             清空
+          </Button>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={board.moveHistory.length === 0}
+            className="flex-1"
+          >
+            <Download className="h-4 w-4 mr-1" />
+            导出
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleImport}
+            className="flex-1"
+          >
+            <Upload className="h-4 w-4 mr-1" />
+            导入
           </Button>
         </div>
       </CardContent>
