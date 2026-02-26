@@ -129,8 +129,8 @@ export function drawBoard(
   } = {}
 ): void {
   const {
-    backgroundColor = '#E8D5B5',
-    lineColor = '#5D4037',
+    backgroundColor = '#C9B896',
+    lineColor = '#4A3728',
     starColor = '#3E2723',
   } = options;
 

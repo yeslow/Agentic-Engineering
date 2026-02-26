@@ -1,5 +1,8 @@
 import { useJosekiStore } from '../../store/josekiStore';
 import type { Joseki } from '../../data/joseki';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Star } from 'lucide-react';
 
 interface JosekiCardProps {
   joseki: Joseki;
@@ -7,8 +10,6 @@ interface JosekiCardProps {
 }
 
 function JosekiCard({ joseki, onSelect }: JosekiCardProps) {
-  const difficultyStars = '★'.repeat(joseki.difficulty) + '☆'.repeat(5 - joseki.difficulty);
-
   const typeLabels: Record<string, string> = {
     approach: '挂角',
     enclosure: '缔角',
@@ -24,41 +25,58 @@ function JosekiCard({ joseki, onSelect }: JosekiCardProps) {
   };
 
   return (
-    <div
+    <Card
       onClick={onSelect}
-      className="bg-white rounded-lg shadow-sm border border-ogs-border p-4 cursor-pointer hover:shadow-md hover:border-ogs-accent transition-all"
+      className="cursor-pointer hover:border-primary/50 transition-colors"
     >
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="font-bold text-ogs-text">{joseki.name}</h3>
-        <span className="text-xs bg-ogs-bg px-2 py-1 rounded text-ogs-muted">
-          {categoryLabels[joseki.category]}
-        </span>
-      </div>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-base">{joseki.name}</CardTitle>
+            {joseki.japaneseName && (
+              <CardDescription className="text-xs mt-0.5">
+                {joseki.japaneseName}
+              </CardDescription>
+            )}
+          </div>
+          <Badge variant="outline">{categoryLabels[joseki.category]}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="flex items-center gap-2 mb-3">
+          <Badge variant="secondary" className="text-xs">
+            {typeLabels[joseki.type]}
+          </Badge>
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star
+                key={i}
+                className={`h-3 w-3 ${
+                  i < joseki.difficulty
+                    ? 'fill-yellow-500 text-yellow-500'
+                    : 'text-muted-foreground'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
 
-      {joseki.japaneseName && (
-        <p className="text-xs text-ogs-muted mb-2">{joseki.japaneseName}</p>
-      )}
+        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+          {joseki.explanation}
+        </p>
 
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded">
-          {typeLabels[joseki.type]}
-        </span>
-        <span className="text-xs text-yellow-600">{difficultyStars}</span>
-      </div>
-
-      <p className="text-sm text-ogs-muted line-clamp-2">{joseki.explanation}</p>
-
-      <div className="mt-2 flex flex-wrap gap-1">
-        {joseki.tags.slice(0, 3).map((tag) => (
-          <span
-            key={tag}
-            className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-    </div>
+        <div className="flex flex-wrap gap-1">
+          {joseki.tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="text-xs px-1.5 py-0.5 bg-muted text-muted-foreground rounded"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

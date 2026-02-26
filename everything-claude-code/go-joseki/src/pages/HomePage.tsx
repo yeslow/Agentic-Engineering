@@ -1,5 +1,6 @@
 import { GoBoard } from '../components/board/GoBoard';
 import { BoardControls } from '../components/board/BoardControls';
+import { Card, CardContent } from '@/components/ui/card';
 
 export function HomePage() {
   return (
@@ -7,13 +8,15 @@ export function HomePage() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Board Section */}
         <div className="flex-1">
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-ogs-border">
-            <GoBoard size={600} className="w-full max-w-[600px] mx-auto" />
-          </div>
+          <Card>
+            <CardContent className="p-4">
+              <GoBoard size={600} className="w-full max-w-[600px] mx-auto" />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Controls Section */}
-        <div className="w-full lg:w-64">
+        <div className="w-full lg:w-72">
           <BoardControls />
         </div>
       </div>

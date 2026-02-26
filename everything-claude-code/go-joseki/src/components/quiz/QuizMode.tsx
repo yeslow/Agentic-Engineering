@@ -15,6 +15,11 @@ import {
   drawBoard,
   drawStone,
 } from '../../lib/boardRenderer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle, RotateCcw, ChevronRight } from 'lucide-react';
 
 export function QuizMode() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -60,7 +65,7 @@ export function QuizMode() {
 
         // Draw number label
         ctx.globalAlpha = 0.7;
-        ctx.fillStyle = i === selectedOption ? '#1A6B9C' : '#666';
+        ctx.fillStyle = i === selectedOption ? 'hsl(var(--primary))' : '#666';
         ctx.beginPath();
         ctx.arc(x, y, dims.stoneRadius * 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -133,8 +138,8 @@ export function QuizMode() {
     setShowResult(true);
     setResultMessage(
       result.isCorrect
-        ? '✅ 正确！'
-        : `❌ 不正确。正确答案是 ${coordinateToLabel(result.correctAnswer)}`
+        ? '正确！'
+        : `不正确。正确答案是 ${coordinateToLabel(result.correctAnswer)}`
     );
 
     // Record progress
@@ -168,101 +173,102 @@ export function QuizMode() {
   if (isComplete) {
     const score = calculateQuizScore(session);
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-ogs-border p-8 text-center">
-        <h2 className="text-2xl font-bold text-ogs-text mb-4">🎉 测验完成！</h2>
-        <div className="text-6xl font-bold text-ogs-accent mb-4">{score}%</div>
-        <p className="text-ogs-muted mb-6">
+      <Card className="p-8 text-center">
+        <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+        <h2 className="text-2xl font-bold mb-4">测验完成！</h2>
+        <div className="text-6xl font-bold text-primary mb-4">{score}%</div>
+        <p className="text-muted-foreground mb-6">
           答对 {session.score} / {session.totalQuestions} 题
         </p>
-        <button
-          onClick={startNewQuiz}
-          className="px-6 py-3 bg-ogs-accent text-white rounded-lg hover:bg-ogs-accent/90 transition-colors"
-        >
+        <Button onClick={startNewQuiz}>
+          <RotateCcw className="h-4 w-4 mr-2" />
           再测一次
-        </button>
-      </div>
+        </Button>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-ogs-border p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-ogs-text">测验模式</h2>
-        <span className="text-sm text-ogs-muted">
-          第 {session.currentQuestionIndex + 1} / {session.totalQuestions} 题
-        </span>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-shrink-0">
-          <canvas
-            ref={canvasRef}
-            width={size}
-            height={size}
-            className="rounded border border-ogs-border"
-          />
-          <p className="text-xs text-ogs-muted mt-2 text-center">
-            根据当前局面，选择下一手
-          </p>
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle>测验模式</CardTitle>
+          <Badge variant="secondary">
+            第 {session.currentQuestionIndex + 1} / {session.totalQuestions} 题
+          </Badge>
         </div>
+      </CardHeader>
 
-        <div className="flex-1 space-y-4">
-          <div className="bg-ogs-bg rounded p-3">
-            <p className="text-sm text-ogs-muted">
-              来自定式: <span className="font-medium text-ogs-text">{currentQuestion.josekiName}</span>
+      <CardContent>
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-shrink-0">
+            <canvas
+              ref={canvasRef}
+              width={size}
+              height={size}
+              className="rounded-lg border"
+            />
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              根据当前局面，选择下一手
             </p>
           </div>
 
-          {showResult && (
-            <div className={`p-3 rounded ${resultMessage.includes('✅') ? 'bg-green-50 border-l-4 border-green-400' : 'bg-red-50 border-l-4 border-red-400'}`}>
-              <p className="text-sm font-medium">{resultMessage}</p>
-              {currentQuestion.hint && (
-                <p className="text-xs text-ogs-muted mt-1">{currentQuestion.hint}</p>
-              )}
+          <div className="flex-1 space-y-4">
+            <Card>
+              <CardContent className="p-3">
+                <p className="text-sm text-muted-foreground">
+                  来自定式: <span className="font-medium">{currentQuestion.josekiName}</span>
+                </p>
+              </CardContent>
+            </Card>
+
+            {showResult && (
+              <Alert variant={resultMessage.includes('正确') ? "default" : "destructive"} className={resultMessage.includes('正确') ? "border-green-500/50 bg-green-500/10" : ""}>
+                <AlertDescription>{resultMessage}</AlertDescription>
+                {currentQuestion.hint && (
+                  <p className="text-xs text-muted-foreground mt-1">{currentQuestion.hint}</p>
+                )}
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">选择下一手：</p>
+              {currentQuestion.options.map((opt, index) => (
+                <Button
+                  key={index}
+                  variant={selectedOption === index ? "default" : "outline"}
+                  onClick={() => handleOptionSelect(index)}
+                  disabled={showResult}
+                  className="w-full justify-start"
+                >
+                  <span className="inline-flex items-center justify-center w-6 h-6 bg-primary text-primary-foreground rounded-full text-sm mr-3">
+                    {index + 1}
+                  </span>
+                  {coordinateToLabel(opt)}
+                </Button>
+              ))}
             </div>
-          )}
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-ogs-text">选择下一手：</p>
-            {currentQuestion.options.map((opt, index) => (
-              <button
-                key={index}
-                onClick={() => handleOptionSelect(index)}
-                disabled={showResult}
-                className={`w-full p-3 text-left rounded border transition-colors ${
-                  selectedOption === index
-                    ? 'border-ogs-accent bg-blue-50'
-                    : 'border-ogs-border hover:bg-gray-50'
-                } ${showResult ? 'opacity-50' : ''}`}
-              >
-                <span className="inline-flex items-center justify-center w-6 h-6 bg-ogs-accent text-white rounded-full text-sm mr-3">
-                  {index + 1}
-                </span>
-                {coordinateToLabel(opt)}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
             {!showResult ? (
-              <button
+              <Button
                 onClick={handleSubmit}
                 disabled={selectedOption === null}
-                className="flex-1 px-4 py-3 bg-ogs-accent text-white rounded-lg hover:bg-ogs-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full"
               >
                 提交答案
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 onClick={handleNext}
-                className="flex-1 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                className="w-full"
               >
-                下一题 →
-              </button>
+                下一题
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

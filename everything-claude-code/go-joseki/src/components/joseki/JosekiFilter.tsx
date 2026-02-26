@@ -1,97 +1,105 @@
 import { useJosekiStore } from '../../store/josekiStore';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Filter, X } from 'lucide-react';
 
 export function JosekiFilterPanel() {
   const { filter, setFilter, clearFilter, filteredList, josekiList } = useJosekiStore();
 
-  const categories = [
-    { value: '', label: '全部类型' },
-    { value: 'corner', label: '角部定式' },
-    { value: 'side', label: '边上定式' },
-    { value: 'center', label: '中腹定式' },
-  ];
-
-  const types = [
-    { value: '', label: '全部下法' },
-    { value: 'approach', label: '挂角' },
-    { value: 'enclosure', label: '缔角' },
-    { value: 'pincer', label: '夹攻' },
-    { value: 'invasion', label: '点角' },
-    { value: 'other', label: '其他' },
-  ];
-
-  const difficulties = [
-    { value: 0, label: '全部难度' },
-    { value: 1, label: '★ 入门' },
-    { value: 2, label: '★★ 基础' },
-    { value: 3, label: '★★★ 进阶' },
-    { value: 4, label: '★★★★ 高级' },
-    { value: 5, label: '★★★★★ 专业' },
-  ];
-
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-ogs-border p-4 mb-6">
-      <div className="flex flex-wrap gap-4 items-end">
-        <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-ogs-text mb-1">类型</label>
-          <select
-            value={filter.category || ''}
-            onChange={(e) => setFilter({ category: e.target.value as any })}
-            className="w-full px-3 py-2 border border-ogs-border rounded focus:outline-none focus:ring-2 focus:ring-ogs-accent"
+    <Card className="mb-6">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">筛选定式</span>
+          <Badge variant="secondary" className="ml-auto">
+            {filteredList.length} / {josekiList.length}
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <div className="space-y-2">
+            <Label>类型</Label>
+            <Select
+              value={filter.category || 'all'}
+              onValueChange={(value) => setFilter({ category: value === 'all' ? '' : value as any })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="全部类型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部类型</SelectItem>
+                <SelectItem value="corner">角部定式</SelectItem>
+                <SelectItem value="side">边上定式</SelectItem>
+                <SelectItem value="center">中腹定式</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>下法</Label>
+            <Select
+              value={filter.type || 'all'}
+              onValueChange={(value) => setFilter({ type: value === 'all' ? '' : value as any })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="全部下法" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部下法</SelectItem>
+                <SelectItem value="approach">挂角</SelectItem>
+                <SelectItem value="enclosure">缔角</SelectItem>
+                <SelectItem value="pincer">夹攻</SelectItem>
+                <SelectItem value="invasion">点角</SelectItem>
+                <SelectItem value="other">其他</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>难度</Label>
+            <Select
+              value={filter.difficulty?.toString() || '0'}
+              onValueChange={(value) => setFilter({ difficulty: value === '0' ? undefined : Number(value) })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="全部难度" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">全部难度</SelectItem>
+                <SelectItem value="1">★ 入门</SelectItem>
+                <SelectItem value="2">★★ 基础</SelectItem>
+                <SelectItem value="3">★★★ 进阶</SelectItem>
+                <SelectItem value="4">★★★★ 高级</SelectItem>
+                <SelectItem value="5">★★★★★ 专业</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>搜索</Label>
+            <Input
+              type="text"
+              value={filter.searchTerm || ''}
+              onChange={(e) => setFilter({ searchTerm: e.target.value })}
+              placeholder="名称或标签..."
+            />
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={clearFilter}
+            className="w-full"
           >
-            {categories.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+            <X className="h-4 w-4 mr-1" />
+            清除
+          </Button>
         </div>
-
-        <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-ogs-text mb-1">下法</label>
-          <select
-            value={filter.type || ''}
-            onChange={(e) => setFilter({ type: e.target.value as any })}
-            className="w-full px-3 py-2 border border-ogs-border rounded focus:outline-none focus:ring-2 focus:ring-ogs-accent"
-          >
-            {types.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-ogs-text mb-1">难度</label>
-          <select
-            value={filter.difficulty || 0}
-            onChange={(e) => setFilter({ difficulty: Number(e.target.value) || undefined })}
-            className="w-full px-3 py-2 border border-ogs-border rounded focus:outline-none focus:ring-2 focus:ring-ogs-accent"
-          >
-            {difficulties.map((d) => (
-              <option key={d.value} value={d.value}>{d.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-sm font-medium text-ogs-text mb-1">搜索</label>
-          <input
-            type="text"
-            value={filter.searchTerm || ''}
-            onChange={(e) => setFilter({ searchTerm: e.target.value })}
-            placeholder="输入名称或标签..."
-            className="w-full px-3 py-2 border border-ogs-border rounded focus:outline-none focus:ring-2 focus:ring-ogs-accent"
-          />
-        </div>
-
-        <button
-          onClick={clearFilter}
-          className="px-4 py-2 bg-gray-100 text-ogs-text rounded hover:bg-gray-200 transition-colors"
-        >
-          清除
-        </button>
-      </div>
-
-      <div className="mt-4 text-sm text-ogs-muted">
-        显示 {filteredList.length} / {josekiList.length} 个定式
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

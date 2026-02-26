@@ -16,7 +16,14 @@ import {
   drawStone,
   drawGhostStone,
 } from '../../lib/boardRenderer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import type { Coordinate } from '../../types/go';
+import { Lightbulb, ArrowLeft, CheckCircle, BookOpen, AlertCircle, RotateCcw } from 'lucide-react';
 
 export function PracticeMode() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -128,19 +135,24 @@ export function PracticeMode() {
     }
   };
 
+  const handleRestart = () => {
+    if (!selectedJoseki) return;
+    const newSession = createPracticeSession(selectedJoseki);
+    setSession(newSession);
+    setMessage('请按照定式顺序下棋');
+    setIsComplete(false);
+  };
+
   if (!selectedJoseki) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-ogs-border p-8 text-center">
+      <Card className="p-8 text-center">
         <div className="text-6xl mb-4">📚</div>
-        <h2 className="text-xl font-bold text-ogs-text mb-2">请选择要练习的定式</h2>
-        <p className="text-ogs-muted mb-4">前往定式库选择一个定式开始练习</p>
-        <a
-          href="/joseki"
-          className="inline-block px-4 py-2 bg-ogs-accent text-white rounded hover:bg-ogs-accent/90 transition-colors"
-        >
-          去定式库
-        </a>
-      </div>
+        <h2 className="text-xl font-bold mb-2">请选择要练习的定式</h2>
+        <p className="text-muted-foreground mb-4">前往定式库选择一个定式开始练习</p>
+        <Button asChild>
+          <a href="/joseki">去定式库</a>
+        </Button>
+      </Card>
     );
   }
 
@@ -150,85 +162,101 @@ export function PracticeMode() {
   const progress = (session.currentMoveIndex / selectedJoseki.mainLine.length) * 100;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-ogs-border p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-ogs-text">练习模式: {selectedJoseki.name}</h2>
-        <button
-          onClick={clearSelection}
-          className="px-3 py-1 text-sm bg-gray-100 text-ogs-text rounded hover:bg-gray-200"
-        >
-          返回
-        </button>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-shrink-0">
-          <canvas
-            ref={canvasRef}
-            width={size}
-            height={size}
-            onClick={handleClick}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={() => setHoverCoord(null)}
-            className={`rounded border border-ogs-border ${isComplete ? 'cursor-default' : 'cursor-pointer'}`}
-          />
-        </div>
-
-        <div className="flex-1 space-y-4">
-          <div className="bg-ogs-bg rounded p-3">
-            <div className="flex justify-between mb-2">
-              <span className="text-sm font-medium text-ogs-text">
-                进度: {session.currentMoveIndex} / {selectedJoseki.mainLine.length}
-              </span>
-              <span className="text-sm text-ogs-muted">
-                正确率: {accuracy}%
-              </span>
-            </div>
-            <div className="w-full h-2 bg-gray-200 rounded overflow-hidden">
-              <div
-                className="h-full bg-ogs-accent transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-
-          <div className={`p-3 rounded ${isComplete ? 'bg-green-50 border-l-4 border-green-400' : 'bg-blue-50 border-l-4 border-blue-400'}`}>
-            <p className="text-sm text-ogs-text">{message}</p>
-          </div>
-
-          {isComplete && (
-            <div className="bg-green-50 rounded p-4 text-center">
-              <h3 className="text-lg font-bold text-green-700 mb-2">🎉 恭喜完成！</h3>
-              <p className="text-sm text-green-600">
-                最终正确率: {accuracy}%
-              </p>
-              <p className="text-xs text-ogs-muted mt-1">
-                使用提示: {session.hintsUsed} 次 | 错误: {session.mistakes} 次
-              </p>
-            </div>
-          )}
-
-          {!isComplete && (
-            <div className="flex gap-2">
-              <button
-                onClick={handleHint}
-                className="flex-1 px-4 py-2 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
-              >
-                💡 提示
-              </button>
-            </div>
-          )}
-
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
           <div>
-            <h3 className="font-medium text-ogs-text mb-2">要点</h3>
-            <ul className="list-disc list-inside text-sm text-ogs-muted space-y-1">
-              {selectedJoseki.keyPoints.map((point, index) => (
-                <li key={index}>{point}</li>
-              ))}
-            </ul>
+            <CardTitle>练习模式: {selectedJoseki.name}</CardTitle>
+          </div>
+          <div className="flex gap-2">
+            {isComplete && (
+              <Button variant="outline" size="sm" onClick={handleRestart}>
+                <RotateCcw className="h-4 w-4 mr-1" />
+                重新开始
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={clearSelection}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              返回
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </CardHeader>
+
+      <CardContent>
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-shrink-0">
+            <canvas
+              ref={canvasRef}
+              width={size}
+              height={size}
+              onClick={handleClick}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={() => setHoverCoord(null)}
+              className={`rounded-lg border ${isComplete ? 'cursor-default' : 'cursor-pointer'}`}
+            />
+          </div>
+
+          <div className="flex-1 space-y-4">
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">
+                    进度: {session.currentMoveIndex} / {selectedJoseki.mainLine.length}
+                  </span>
+                  <Badge variant="secondary">正确率: {accuracy}%</Badge>
+                </div>
+                <Progress value={progress} />
+              </CardContent>
+            </Card>
+
+            <Alert variant={isComplete ? "default" : "destructive"} className={isComplete ? "border-green-500/50 bg-green-500/10" : ""}>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+
+            {isComplete && (
+              <Card className="border-green-500/50 bg-green-500/10">
+                <CardContent className="p-4 text-center">
+                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                  <h3 className="text-lg font-bold text-green-700 mb-2">恭喜完成！</h3>
+                  <p className="text-sm text-green-600">
+                    最终正确率: {accuracy}%
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    使用提示: {session.hintsUsed} 次 | 错误: {session.mistakes} 次
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {!isComplete && (
+              <Button
+                variant="secondary"
+                onClick={handleHint}
+                className="w-full"
+              >
+                <Lightbulb className="h-4 w-4 mr-1" />
+                提示
+              </Button>
+            )}
+
+            <Separator />
+
+            <div>
+              <h3 className="font-medium mb-2 flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                要点
+              </h3>
+              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                {selectedJoseki.keyPoints.map((point, index) => (
+                  <li key={index}>{point}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

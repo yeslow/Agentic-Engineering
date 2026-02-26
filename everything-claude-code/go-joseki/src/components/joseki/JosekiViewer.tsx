@@ -7,6 +7,13 @@ import {
   drawStone,
   drawLastMoveMarker,
 } from '../../lib/boardRenderer';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { ChevronLeft, ChevronRight, SkipBack, ArrowLeft } from 'lucide-react';
 
 export function JosekiViewer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -63,9 +70,9 @@ export function JosekiViewer() {
 
   if (!selectedJoseki) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-ogs-border p-8 text-center">
-        <p className="text-ogs-muted">请选择一个定式查看详情</p>
-      </div>
+      <Card className="p-8 text-center">
+        <p className="text-muted-foreground">请选择一个定式查看详情</p>
+      </Card>
     );
   }
 
@@ -78,128 +85,121 @@ export function JosekiViewer() {
     : 0;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-ogs-border p-4">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h2 className="text-xl font-bold text-ogs-text">{selectedJoseki.name}</h2>
-          {selectedJoseki.japaneseName && (
-            <p className="text-sm text-ogs-muted">{selectedJoseki.japaneseName}</p>
-          )}
+    <Card>
+      <CardHeader className="pb-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>{selectedJoseki.name}</CardTitle>
+            {selectedJoseki.japaneseName && (
+              <CardDescription>{selectedJoseki.japaneseName}</CardDescription>
+            )}
+          </div>
+          <Button variant="outline" size="sm" onClick={clearSelection}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            返回
+          </Button>
         </div>
-        <button
-          onClick={clearSelection}
-          className="px-3 py-1 text-sm bg-gray-100 text-ogs-text rounded hover:bg-gray-200"
-        >
-          返回列表
-        </button>
-      </div>
+      </CardHeader>
 
-      {/* Board and Info */}
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Board */}
-        <div className="flex-shrink-0">
-          <canvas
-            ref={canvasRef}
-            width={size}
-            height={size}
-            className="rounded border border-ogs-border"
-          />
-        </div>
-
-        {/* Info Panel */}
-        <div className="flex-1 space-y-4">
-          {/* Move Controls */}
-          <div className="bg-ogs-bg rounded p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-ogs-text">
-                手数: {currentMoveNumber} / {selectedJoseki.mainLine.length}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={resetPosition}
-                  disabled={currentMoveNumber === 0}
-                  className="px-3 py-1 text-sm bg-white border border-ogs-border rounded hover:bg-gray-50 disabled:opacity-50"
-                >
-                  开局
-                </button>
-                <button
-                  onClick={prevMove}
-                  disabled={currentMoveNumber === 0}
-                  className="px-3 py-1 text-sm bg-white border border-ogs-border rounded hover:bg-gray-50 disabled:opacity-50"
-                >
-                  ← 上一手
-                </button>
-                <button
-                  onClick={nextMove}
-                  disabled={currentMoveNumber >= selectedJoseki.mainLine.length}
-                  className="px-3 py-1 text-sm bg-ogs-accent text-white rounded hover:bg-ogs-accent/90 disabled:opacity-50"
-                >
-                  下一手 →
-                </button>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full h-2 bg-gray-200 rounded overflow-hidden">
-              <div
-                className="h-full bg-ogs-accent transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-
-            {/* Move Slider */}
-            <input
-              type="range"
-              min={0}
-              max={selectedJoseki.mainLine.length}
-              value={currentMoveNumber}
-              onChange={(e) => goToMove(Number(e.target.value))}
-              className="w-full mt-2"
+      <CardContent>
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Board */}
+          <div className="flex-shrink-0">
+            <canvas
+              ref={canvasRef}
+              width={size}
+              height={size}
+              className="rounded-lg border"
             />
           </div>
 
-          {/* Current Move Comment */}
-          {currentMove?.comment && (
-            <div className="bg-blue-50 rounded p-3 border-l-4 border-blue-400">
-              <p className="text-sm text-blue-800">
-                <strong>第 {currentMoveNumber} 手 ({currentMove.color === 'black' ? '黑' : '白'}):</strong>{' '}
-                {currentMove.comment}
+          {/* Info Panel */}
+          <div className="flex-1 space-y-4">
+            {/* Move Controls */}
+            <Card>
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    手数: {currentMoveNumber} / {selectedJoseki.mainLine.length}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={resetPosition}
+                      disabled={currentMoveNumber === 0}
+                    >
+                      <SkipBack className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={prevMove}
+                      disabled={currentMoveNumber === 0}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      onClick={nextMove}
+                      disabled={currentMoveNumber >= selectedJoseki.mainLine.length}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <Progress value={progress} />
+
+                <Slider
+                  value={[currentMoveNumber]}
+                  min={0}
+                  max={selectedJoseki.mainLine.length}
+                  step={1}
+                  onValueChange={([value]) => goToMove(value)}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Current Move Comment */}
+            {currentMove?.comment && (
+              <div className="bg-primary/10 rounded-lg p-3 border-l-4 border-primary">
+                <p className="text-sm">
+                  <strong>第 {currentMoveNumber} 手 ({currentMove.color === 'black' ? '黑' : '白'}):</strong>{' '}
+                  {currentMove.comment}
+                </p>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Explanation */}
+            <div>
+              <h3 className="font-medium mb-2">定式解说</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {selectedJoseki.explanation}
               </p>
             </div>
-          )}
 
-          {/* Explanation */}
-          <div>
-            <h3 className="font-medium text-ogs-text mb-2">定式解说</h3>
-            <p className="text-sm text-ogs-muted leading-relaxed">
-              {selectedJoseki.explanation}
-            </p>
-          </div>
+            {/* Key Points */}
+            <div>
+              <h3 className="font-medium mb-2">要点</h3>
+              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                {selectedJoseki.keyPoints.map((point, index) => (
+                  <li key={index}>{point}</li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Key Points */}
-          <div>
-            <h3 className="font-medium text-ogs-text mb-2">要点</h3>
-            <ul className="list-disc list-inside text-sm text-ogs-muted space-y-1">
-              {selectedJoseki.keyPoints.map((point, index) => (
-                <li key={index}>{point}</li>
+            {/* Tags */}
+            <div className="flex flex-wrap gap-2">
+              {selectedJoseki.tags.map((tag) => (
+                <Badge key={tag} variant="secondary">{tag}</Badge>
               ))}
-            </ul>
-          </div>
-
-          {/* Tags */}
-          <div className="flex flex-wrap gap-2">
-            {selectedJoseki.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-2 py-1 text-xs bg-ogs-bg text-ogs-muted rounded"
-              >
-                {tag}
-              </span>
-            ))}
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
