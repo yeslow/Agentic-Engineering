@@ -7,10 +7,14 @@ interface TrialStones {
   white: Coordinate[];
 }
 
-// Tracks stones captured during trial mode
 interface TrialCaptures {
-  black: Coordinate[]; // white stones captured by black trial moves
-  white: Coordinate[]; // black stones captured by white trial moves
+  black: Coordinate[];
+  white: Coordinate[];
+}
+
+interface TrialMove {
+  coordinate: Coordinate;
+  color: StoneColor;
 }
 
 interface BoardStore {
@@ -24,6 +28,8 @@ interface BoardStore {
   trialMoveCount: number;
   trialCapturedStones: TrialCaptures;
   trialKoPoint: Coordinate | null;
+  trialModeEntryMove: number;
+  trialMoveHistory: TrialMove[];
 
   // Actions
   initBoard: (size?: 9 | 13 | 19) => void;
@@ -43,6 +49,8 @@ interface BoardStore {
   goToPrevious: () => void;
   goToNext: () => void;
   goToLastMove: () => void;
+  getTotalMoves: () => number;
+  getCurrentTrialMoveIndex: () => number;
 }
 
 export const useBoardStore = create<BoardStore>((set, get) => ({
@@ -56,6 +64,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   trialMoveCount: 0,
   trialCapturedStones: { black: [], white: [] },
   trialKoPoint: null,
+  trialModeEntryMove: 0,
+  trialMoveHistory: [],
 
   initBoard: (size = 19) => {
     set({
@@ -69,6 +79,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
+      trialModeEntryMove: 0,
+      trialMoveHistory: [],
     });
   },
 
@@ -208,17 +220,21 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       }
     }
 
-    set({
+    set((state) => ({
       trialStones: newTrialStones,
-      trialMoveCount: trialMoveCount + 1,
+      trialMoveCount: state.trialMoveCount + 1,
       trialCapturedStones: newTrialCapturedStones,
       trialKoPoint: newTrialKoPoint,
-    });
+      trialMoveHistory: [
+        ...state.trialMoveHistory,
+        { coordinate: coord, color: trialColor },
+      ],
+    }));
     return true;
   },
 
   undoTrialMove: () => {
-    const { trialStones, trialMoveCount, trialCapturedStones } = get();
+    const { trialStones, trialMoveCount, trialCapturedStones, trialMoveHistory } = get();
 
     if (trialMoveCount === 0) {
       return;
@@ -239,24 +255,23 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     }
 
     // Remove captures made by this color's last move
-    // We need to recalculate captures to know what to remove
-    // For simplicity, we keep track of all captures per color and clear them on undo
-    // A more sophisticated approach would store captures per move
     const newTrialCapturedStones: TrialCaptures = {
       black: [...trialCapturedStones.black],
       white: [...trialCapturedStones.white],
     };
 
-    // Clear captures for the last move color (they would have made captures)
-    // Note: This is a simplification - ideally we'd track which captures belong to which move
-    // For now, just clear all captures for this color when undoing
+    // Clear captures for the last move color
     newTrialCapturedStones[lastColor] = [];
+
+    // Remove last move from history
+    const newTrialMoveHistory = trialMoveHistory.slice(0, -1);
 
     set({
       trialStones: newTrialStones,
       trialMoveCount: trialMoveCount - 1,
       trialCapturedStones: newTrialCapturedStones,
-      trialKoPoint: null, // Clear ko point on undo
+      trialKoPoint: null,
+      trialMoveHistory: newTrialMoveHistory,
     });
   },
 
@@ -266,6 +281,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
+      trialMoveHistory: [],
     });
   },
 
@@ -277,26 +293,35 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
+      trialModeEntryMove: 0,
+      trialMoveHistory: [],
     });
   },
 
   enterTrialMode: () => {
+    const { currentViewMove } = get();
     set({
       gameMode: 'trial',
       trialStones: { black: [], white: [] },
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
+      trialModeEntryMove: currentViewMove,
+      trialMoveHistory: [],
     });
   },
 
   exitTrialMode: () => {
+    const { trialModeEntryMove } = get();
     set({
       gameMode: 'battle',
       trialStones: { black: [], white: [] },
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
+      currentViewMove: trialModeEntryMove,
+      trialModeEntryMove: 0,
+      trialMoveHistory: [],
     });
   },
 
@@ -317,6 +342,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
+      trialModeEntryMove: 0,
+      trialMoveHistory: [],
     });
   },
 
@@ -345,6 +372,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
+      trialModeEntryMove: 0,
+      trialMoveHistory: [],
     });
   },
 
@@ -362,14 +391,75 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
+      trialModeEntryMove: 0,
+      trialMoveHistory: [],
     });
   },
 
   goToMove: (index: number) => {
-    const { board } = get();
-    const targetIndex = Math.max(0, Math.min(index, board.moveHistory.length));
+    const { board, gameMode, trialModeEntryMove, trialMoveHistory } = get();
+    const targetIndex = Math.max(0, Math.min(index, board.moveHistory.length + trialMoveHistory.length));
 
-    // Replay moves up to target index
+    // In trial mode, handle navigation differently
+    if (gameMode === 'trial') {
+      if (targetIndex <= trialModeEntryMove) {
+        // Navigate to board move - but stay in trial mode
+        const newBoard = createInitialBoard(board.size);
+        let tempBoard = newBoard;
+        for (let i = 0; i < targetIndex; i++) {
+          const move = board.moveHistory[i];
+          tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+        }
+
+        const currentColor = targetIndex % 2 === 0 ? 'black' : 'white';
+        const isViewing = targetIndex < board.moveHistory.length;
+
+        // Stay in trial mode, preserve trialModeEntryMove
+        set({
+          board: {
+            ...tempBoard,
+            moveHistory: board.moveHistory,
+            currentMoveNumber: targetIndex,
+          },
+          currentColor,
+          currentViewMove: targetIndex,
+          isViewingMode: isViewing,
+          gameMode: 'trial', // Stay in trial mode
+          trialStones: { black: [], white: [] },
+          trialMoveCount: 0,
+          trialCapturedStones: { black: [], white: [] },
+          trialKoPoint: null,
+          trialModeEntryMove, // Preserve entry move
+          trialMoveHistory: [],
+        });
+      } else {
+        // Navigate within trial moves - keep only moves up to targetIndex
+        const movesToKeep = targetIndex - trialModeEntryMove;
+        const newTrialMoveHistory = trialMoveHistory.slice(0, movesToKeep);
+
+        // Rebuild trialStones from the kept moves
+        const newTrialStones: TrialStones = { black: [], white: [] };
+        for (let i = 0; i < newTrialMoveHistory.length; i++) {
+          const move = newTrialMoveHistory[i];
+          if (move.color === 'black') {
+            newTrialStones.black.push(move.coordinate);
+          } else {
+            newTrialStones.white.push(move.coordinate);
+          }
+        }
+
+        set({
+          trialStones: newTrialStones,
+          trialMoveCount: newTrialMoveHistory.length,
+          trialMoveHistory: newTrialMoveHistory,
+          trialCapturedStones: { black: [], white: [] }, // Simplified: clear captures on navigation
+          trialKoPoint: null,
+        });
+      }
+      return;
+    }
+
+    // Battle mode - original behavior
     const newBoard = createInitialBoard(board.size);
     let tempBoard = newBoard;
     for (let i = 0; i < targetIndex; i++) {
@@ -395,24 +485,50 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       currentViewMove: targetIndex,
       isViewingMode: isViewing,
       gameMode: 'battle', // Always stay in battle mode when navigating
-      trialStones: { black: [], white: [] }, // Clear trial stones when navigating
+      trialStones: { black: [], white: [] },
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
+      trialModeEntryMove: 0,
+      trialMoveHistory: [],
     });
   },
 
   goToPrevious: () => {
-    const { currentViewMove } = get();
-    if (currentViewMove > 0) {
-      get().goToMove(currentViewMove - 1);
+    const { currentViewMove, gameMode, trialModeEntryMove, trialMoveCount } = get();
+    if (gameMode === 'trial') {
+      // In trial mode, use current trial move index
+      const currentIndex = trialModeEntryMove + trialMoveCount;
+      if (currentIndex > 0) {
+        if (currentIndex < trialModeEntryMove) {
+          // Navigate board history (only if we've already navigated back in board)
+          get().goToMove(currentIndex - 1);
+        } else if (currentIndex > trialModeEntryMove) {
+          // Remove trial moves
+          get().undoTrialMove();
+        }
+        // If currentIndex === trialModeEntryMove, do nothing (no trial moves to undo)
+      }
+    } else {
+      if (currentViewMove > 0) {
+        get().goToMove(currentViewMove - 1);
+      }
     }
   },
 
   goToNext: () => {
-    const { currentViewMove, board } = get();
-    if (currentViewMove < board.moveHistory.length) {
-      get().goToMove(currentViewMove + 1);
+    const { currentViewMove, board, gameMode, trialModeEntryMove, trialMoveHistory } = get();
+    if (gameMode === 'trial') {
+      const currentIndex = trialModeEntryMove + trialMoveHistory.length;
+      const totalMoves = board.moveHistory.length + trialMoveHistory.length;
+      if (currentIndex < totalMoves) {
+        // Can't go next in trial mode via button - user plays moves manually
+        // This is a limitation - navigation in trial mode is primarily via playing moves
+      }
+    } else {
+      if (currentViewMove < board.moveHistory.length) {
+        get().goToMove(currentViewMove + 1);
+      }
     }
   },
 
@@ -424,5 +540,22 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   canPlayAt: (coord: Coordinate) => {
     const { board, currentColor } = get();
     return isValidMove(board, coord, currentColor);
+  },
+
+  getTotalMoves: () => {
+    const { board, gameMode, trialModeEntryMove, trialMoveHistory } = get();
+    if (gameMode === 'trial') {
+      // In trial mode, total moves = entry move + trial moves
+      return trialModeEntryMove + trialMoveHistory.length;
+    }
+    return board.moveHistory.length;
+  },
+
+  getCurrentTrialMoveIndex: () => {
+    const { gameMode, currentViewMove, trialModeEntryMove, trialMoveCount } = get();
+    if (gameMode === 'trial') {
+      return trialModeEntryMove + trialMoveCount;
+    }
+    return currentViewMove;
   },
 }));

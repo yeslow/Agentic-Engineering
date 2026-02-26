@@ -544,3 +544,366 @@ describe('BoardStore Navigation', () => {
     });
   });
 });
+
+describe('Trial Mode Progress Bar', () => {
+  beforeEach(() => {
+    useBoardStore.getState().initBoard(19);
+  });
+
+  describe('trialModeEntryMove - saving progress when entering trial mode', () => {
+    it('should save the current move index when entering trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.playMove([3, 15]);
+
+      // Go back to middle of game
+      store.goToMove(1);
+      expect(useBoardStore.getState().currentViewMove).toBe(1);
+
+      // Enter trial mode
+      store.enterTrialMode();
+
+      // Should remember the entry move
+      expect(useBoardStore.getState().trialModeEntryMove).toBe(1);
+    });
+
+    it('should save entry move as 0 when entering from start', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+
+      store.enterTrialMode();
+
+      expect(useBoardStore.getState().trialModeEntryMove).toBe(0);
+    });
+
+    it('should save entry move when at the end of game', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+
+      store.enterTrialMode();
+
+      expect(useBoardStore.getState().trialModeEntryMove).toBe(2);
+    });
+  });
+
+  describe('trialMoveHistory - tracking trial moves for progress bar', () => {
+    it('should track trial moves in a history array', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.enterTrialMode();
+
+      store.playTrialMove([3, 3]);
+
+      expect(useBoardStore.getState().trialMoveHistory.length).toBe(1);
+      expect(useBoardStore.getState().trialMoveHistory[0]).toEqual({
+        coordinate: [3, 3],
+        color: 'black',
+      });
+    });
+
+    it('should track multiple trial moves in sequence', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.enterTrialMode();
+
+      store.playTrialMove([3, 3]); // Black
+      store.playTrialMove([15, 15]); // White
+
+      const state = useBoardStore.getState();
+      expect(state.trialMoveHistory.length).toBe(2);
+      expect(state.trialMoveHistory[0]).toEqual({ coordinate: [3, 3], color: 'black' });
+      expect(state.trialMoveHistory[1]).toEqual({ coordinate: [15, 15], color: 'white' });
+    });
+
+    it('should calculate total moves as board moves + trial moves', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+
+      store.enterTrialMode();
+      store.playTrialMove([3, 15]);
+      store.playTrialMove([15, 3]);
+
+      const state = useBoardStore.getState();
+      const totalMoves = state.board.moveHistory.length + state.trialMoveHistory.length;
+      expect(totalMoves).toBe(4);
+    });
+  });
+
+  describe('exitTrialMode - restoring progress', () => {
+    it('should restore currentViewMove to entry move when exiting trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.playMove([3, 15]);
+
+      // Go back to middle
+      store.goToMove(1);
+      store.enterTrialMode();
+
+      // Play some trial moves
+      store.playTrialMove([10, 10]);
+      store.playTrialMove([10, 11]);
+
+      // Exit trial mode
+      store.exitTrialMode();
+
+      // Should restore to entry move
+      expect(useBoardStore.getState().currentViewMove).toBe(1);
+    });
+
+    it('should clear trial move history when exiting', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.enterTrialMode();
+      store.playTrialMove([3, 3]);
+      store.playTrialMove([15, 15]);
+
+      store.exitTrialMode();
+
+      expect(useBoardStore.getState().trialMoveHistory).toEqual([]);
+    });
+  });
+
+  describe('getTotalMoves - helper for progress bar calculation', () => {
+    it('should return board move count in battle mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+
+      expect(store.getTotalMoves()).toBe(2);
+    });
+
+    it('should return board + trial moves in trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.enterTrialMode();
+      store.playTrialMove([3, 15]);
+
+      expect(store.getTotalMoves()).toBe(3);
+    });
+  });
+
+  describe('getCurrentTrialMoveIndex - for progress bar position', () => {
+    it('should return currentViewMove in battle mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.goToMove(1);
+
+      expect(store.getCurrentTrialMoveIndex()).toBe(1);
+    });
+
+    it('should return entry move + trial moves in trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.goToMove(1);
+      store.enterTrialMode();
+
+      // At entry, should show entry move
+      expect(store.getCurrentTrialMoveIndex()).toBe(1);
+
+      // After trial move, should advance
+      store.playTrialMove([3, 15]);
+      expect(store.getCurrentTrialMoveIndex()).toBe(2);
+    });
+  });
+
+  describe('trial mode navigation - undo trial moves in reverse order', () => {
+    it('should undo trial moves in reverse order when using goToMove', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.enterTrialMode();
+
+      // Play 3 trial moves
+      store.playTrialMove([3, 15]); // move 3
+      store.playTrialMove([15, 3]); // move 4
+      store.playTrialMove([4, 4]); // move 5
+
+      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(5);
+      expect(useBoardStore.getState().trialMoveHistory.length).toBe(3);
+
+      // Navigate back to move 4 (should undo only the last trial move)
+      store.goToMove(4);
+
+      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(4);
+      expect(useBoardStore.getState().trialMoveHistory.length).toBe(2);
+      expect(useBoardStore.getState().trialStones.black).toContainEqual([3, 15]);
+      expect(useBoardStore.getState().trialStones.white).toContainEqual([15, 3]);
+      expect(useBoardStore.getState().trialStones.black).not.toContainEqual([4, 4]);
+    });
+
+    it('should undo multiple trial moves when navigating back multiple steps', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]); // Black 1
+      store.playMove([15, 15]); // White 2
+      store.enterTrialMode();
+
+      // Play 3 trial moves (starting with Black 3)
+      store.playTrialMove([3, 15]); // Black 3
+      store.playTrialMove([15, 3]); // White 4
+      store.playTrialMove([4, 4]); // Black 5
+
+      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(5);
+
+      // Navigate back to move 3 (should undo 2 trial moves, keep only 1)
+      store.goToMove(3);
+
+      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(3);
+      expect(useBoardStore.getState().trialMoveHistory.length).toBe(1);
+      expect(useBoardStore.getState().trialStones.black).toContainEqual([3, 15]);
+    });
+
+    it('should clear all trial moves when navigating to entry move', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.enterTrialMode();
+
+      store.playTrialMove([3, 15]);
+      store.playTrialMove([15, 3]);
+
+      // Navigate back to entry move (move 2)
+      store.goToMove(2);
+
+      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(2);
+      expect(useBoardStore.getState().trialMoveHistory.length).toBe(0);
+      expect(useBoardStore.getState().trialStones.black).toEqual([]);
+      expect(useBoardStore.getState().trialStones.white).toEqual([]);
+    });
+
+    it('should stay in trial mode when navigating back to entry move', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.enterTrialMode();
+
+      store.playTrialMove([3, 15]);
+      store.playTrialMove([15, 3]);
+
+      expect(useBoardStore.getState().gameMode).toBe('trial');
+
+      // Navigate back to entry move (move 2)
+      store.goToMove(2);
+
+      // Should still be in trial mode
+      expect(useBoardStore.getState().gameMode).toBe('trial');
+    });
+
+    it('should stay in trial mode when navigating back within board moves', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.playMove([3, 15]);
+      store.playMove([15, 3]);
+      store.enterTrialMode();
+
+      store.playTrialMove([4, 4]);
+
+      expect(useBoardStore.getState().gameMode).toBe('trial');
+
+      // Navigate back to move 1 (before entry move which is 4)
+      store.goToMove(1);
+
+      // Should still be in trial mode
+      expect(useBoardStore.getState().gameMode).toBe('trial');
+      expect(useBoardStore.getState().trialModeEntryMove).toBe(4);
+    });
+
+    it('should not undo board moves when undoing trial move with no trial moves', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]); // move 1
+      store.playMove([15, 15]); // move 2
+      store.goToMove(2);
+      store.enterTrialMode();
+
+      // No trial moves played yet
+      expect(useBoardStore.getState().trialMoveCount).toBe(0);
+
+      // Undo trial move should do nothing when there are no trial moves
+      store.undoTrialMove();
+
+      // Should still be at move 2
+      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(2);
+      expect(useBoardStore.getState().trialModeEntryMove).toBe(2);
+    });
+
+    it('should not go back in board history when using goToPrevious with no trial moves', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]); // move 1
+      store.playMove([15, 15]); // move 2
+      store.goToMove(2);
+      store.enterTrialMode();
+
+      // No trial moves played yet
+      expect(useBoardStore.getState().trialMoveCount).toBe(0);
+
+      // Record board state before goToPrevious
+      const stonesBefore = {
+        black: useBoardStore.getState().board.stones.black.length,
+        white: useBoardStore.getState().board.stones.white.length,
+      };
+
+      // goToPrevious should not go back in board history when in trial mode with no trial moves
+      store.goToPrevious();
+
+      // Should stay at the same board position (entry move)
+      expect(useBoardStore.getState().board.stones.black.length).toBe(stonesBefore.black);
+      expect(useBoardStore.getState().board.stones.white.length).toBe(stonesBefore.white);
+      expect(useBoardStore.getState().trialModeEntryMove).toBe(2);
+    });
+
+    it('should return correct total moves in trial mode when entering from middle of game', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]); // move 1
+      store.playMove([15, 15]); // move 2
+      store.playMove([3, 15]); // move 3
+
+      // Go back to move 2
+      store.goToMove(2);
+      store.enterTrialMode();
+
+      // Total moves should be entry move (2) + 0 trial moves = 2
+      expect(useBoardStore.getState().getTotalMoves()).toBe(2);
+    });
+
+    it('should return correct total moves in trial mode after playing trial moves', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]); // move 1
+      store.playMove([15, 15]); // move 2
+
+      // Go back to move 1
+      store.goToMove(1);
+      store.enterTrialMode();
+
+      // Play 2 trial moves
+      store.playTrialMove([3, 15]);
+      store.playTrialMove([15, 3]);
+
+      // Total moves should be entry move (1) + 2 trial moves = 3
+      expect(useBoardStore.getState().getTotalMoves()).toBe(3);
+    });
+  });
+});

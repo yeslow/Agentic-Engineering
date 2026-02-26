@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Play } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 export function MoveProgress() {
   const {
@@ -17,12 +17,42 @@ export function MoveProgress() {
     isViewingMode,
     gameMode,
     exitTrialMode,
+    getTotalMoves,
+    getCurrentTrialMoveIndex,
+    trialModeEntryMove,
+    trialMoveHistory,
   } = useBoardStore();
 
-  const totalMoves = board.moveHistory.length;
+  // Calculate total moves and current position based on game mode
+  const totalMoves = getTotalMoves();
+  const currentMoveIndex = getCurrentTrialMoveIndex();
 
   // Get move at current position for display
-  const currentMove = currentViewMove > 0 ? board.moveHistory[currentViewMove - 1] : null;
+  const currentMove = useMemo(() => {
+    if (gameMode === 'trial') {
+      // In trial mode, show board moves first, then trial moves
+      if (currentMoveIndex <= trialModeEntryMove) {
+        // Showing board moves
+        return currentMoveIndex > 0 ? board.moveHistory[currentMoveIndex - 1] : null;
+      } else {
+        // Showing trial moves
+        const trialMoveIndex = currentMoveIndex - trialModeEntryMove - 1;
+        if (trialMoveIndex >= 0 && trialMoveIndex < trialMoveHistory.length) {
+          const trialMove = trialMoveHistory[trialMoveIndex];
+          return {
+            moveNumber: currentMoveIndex,
+            color: trialMove.color,
+            coordinate: trialMove.coordinate,
+            comment: '',
+          };
+        }
+        return null;
+      }
+    } else {
+      // Battle mode
+      return currentViewMove > 0 ? board.moveHistory[currentViewMove - 1] : null;
+    }
+  }, [gameMode, currentMoveIndex, trialModeEntryMove, trialMoveHistory, board.moveHistory, currentViewMove]);
 
   // Keyboard shortcuts: Left Arrow = previous, Right Arrow = next
   useEffect(() => {
@@ -45,13 +75,17 @@ export function MoveProgress() {
         goToMove(0);
       } else if (e.key === 'End') {
         e.preventDefault();
-        goToLastMove();
+        if (gameMode === 'trial') {
+          goToMove(trialModeEntryMove + trialMoveHistory.length);
+        } else {
+          goToLastMove();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [totalMoves, goToMove, goToPrevious, goToNext, goToLastMove]);
+  }, [totalMoves, gameMode, trialModeEntryMove, trialMoveHistory.length, goToMove, goToPrevious, goToNext, goToLastMove]);
 
   return (
     <Card>
@@ -61,7 +95,7 @@ export function MoveProgress() {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                进度 {currentViewMove}/{totalMoves}
+                进度 {currentMoveIndex}/{totalMoves}
               </span>
               <div className="flex items-center gap-2">
                 {gameMode === 'trial' && (
@@ -80,11 +114,25 @@ export function MoveProgress() {
               </div>
             </div>
             <Slider
-              value={[currentViewMove]}
+              value={[currentMoveIndex]}
               min={0}
               max={totalMoves}
               step={1}
-              onValueChange={(value) => goToMove(value[0])}
+              onValueChange={(value) => {
+                const newValue = value[0];
+                if (gameMode === 'trial') {
+                  // In trial mode, navigate to board moves or trial moves accordingly
+                  if (newValue <= trialModeEntryMove) {
+                    // Navigate to board move - this will exit trial mode
+                    goToMove(newValue);
+                  } else {
+                    // Navigate within trial moves - keep only moves up to newValue
+                    goToMove(newValue);
+                  }
+                } else {
+                  goToMove(newValue);
+                }
+              }}
               disabled={totalMoves === 0}
               className="w-full"
             />
@@ -97,7 +145,7 @@ export function MoveProgress() {
                 variant="outline"
                 size="icon"
                 onClick={() => goToMove(0)}
-                disabled={currentViewMove === 0 || totalMoves === 0}
+                disabled={currentMoveIndex === 0 || totalMoves === 0}
                 title="跳到开始"
               >
                 <ChevronsLeft className="h-4 w-4" />
@@ -106,7 +154,7 @@ export function MoveProgress() {
                 variant="outline"
                 size="icon"
                 onClick={goToPrevious}
-                disabled={currentViewMove === 0 || totalMoves === 0}
+                disabled={currentMoveIndex === 0 || totalMoves === 0}
                 title="后退一手"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -118,7 +166,7 @@ export function MoveProgress() {
               {currentMove ? (
                 <div className="text-sm">
                   <span className="font-medium">
-                    第{currentMove.moveNumber}手: {currentMove.color === 'black' ? '黑' : '白'}
+                    第{currentMove.moveNumber}手：{currentMove.color === 'black' ? '黑' : '白'}
                   </span>
                   {currentMove.comment && (
                     <div className="text-xs text-muted-foreground mt-1">
@@ -138,7 +186,7 @@ export function MoveProgress() {
                 variant="outline"
                 size="icon"
                 onClick={goToNext}
-                disabled={currentViewMove >= totalMoves || totalMoves === 0}
+                disabled={currentMoveIndex >= totalMoves || totalMoves === 0}
                 title="前进一手"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -146,8 +194,14 @@ export function MoveProgress() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={goToLastMove}
-                disabled={currentViewMove >= totalMoves || totalMoves === 0}
+                onClick={() => {
+                  if (gameMode === 'trial') {
+                    goToMove(trialModeEntryMove + trialMoveHistory.length);
+                  } else {
+                    goToLastMove();
+                  }
+                }}
+                disabled={currentMoveIndex >= totalMoves || totalMoves === 0}
                 title="跳到最新"
               >
                 <ChevronsRight className="h-4 w-4" />
@@ -155,8 +209,8 @@ export function MoveProgress() {
             </div>
           </div>
 
-          {/* Return to Battle Button (shown in trial mode when viewing past moves) */}
-          {gameMode === 'trial' && isViewingMode && (
+          {/* Return to Battle Button (shown in trial mode) */}
+          {gameMode === 'trial' && (
             <Button
               variant="default"
               size="sm"
