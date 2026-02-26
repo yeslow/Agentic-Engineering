@@ -6,6 +6,7 @@ import {
   drawBoard,
   drawStone,
   drawLastMoveMarker,
+  drawCoordinates,
 } from '../../lib/boardRenderer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,9 @@ export function JosekiViewer() {
 
     // Draw board background and grid
     drawBoard(ctx, size, size, selectedJoseki.boardSize);
+
+    // Draw coordinates
+    drawCoordinates(ctx, size, selectedJoseki.boardSize);
 
     // Draw stones up to current move
     const dims = calculateBoardDimensions(size, selectedJoseki.boardSize);

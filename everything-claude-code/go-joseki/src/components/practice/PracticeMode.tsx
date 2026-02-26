@@ -15,6 +15,7 @@ import {
   drawBoard,
   drawStone,
   drawGhostStone,
+  drawCoordinates,
 } from '../../lib/boardRenderer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,9 @@ export function PracticeMode() {
     if (!ctx) return;
 
     drawBoard(ctx, size, size, selectedJoseki.boardSize);
+
+    // Draw coordinates
+    drawCoordinates(ctx, size, selectedJoseki.boardSize);
 
     const dims = calculateBoardDimensions(size, selectedJoseki.boardSize);
 

@@ -296,3 +296,77 @@ export function drawKoMarker(
   ctx.lineWidth = 2;
   ctx.strokeRect(x - size / 2, y - size / 2, size, size);
 }
+
+/**
+ * Draw coordinate labels (A-T on left/right, 1-19 on top/bottom)
+ */
+export function drawCoordinates(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  boardSize: number,
+  options: {
+    showLeft?: boolean;
+    showRight?: boolean;
+    showTop?: boolean;
+    showBottom?: boolean;
+    fontSize?: number;
+    fontColor?: string;
+  } = {}
+): void {
+  const {
+    showLeft = true,
+    showRight = false,
+    showTop = false,
+    showBottom = true,
+    fontSize = 11,
+    fontColor = '#4A3728',
+  } = options;
+
+  const dims = calculateBoardDimensions(width, boardSize);
+
+  ctx.fillStyle = fontColor;
+  ctx.font = `${fontSize}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Column labels (A-T, skipping I)
+  const columns = 'ABCDEFGHJKLMNOPQRSTUVWXYZ';
+
+  // Top labels
+  if (showTop) {
+    for (let i = 0; i < boardSize; i++) {
+      const x = dims.padding + i * dims.cellSize;
+      const y = dims.padding - 12;
+      ctx.fillText(columns[i], x, y);
+    }
+  }
+
+  // Bottom labels
+  if (showBottom) {
+    for (let i = 0; i < boardSize; i++) {
+      const x = dims.padding + i * dims.cellSize;
+      const y = dims.padding + dims.gridSize + 14;
+      ctx.fillText(columns[i], x, y);
+    }
+  }
+
+  // Left labels (1-19 from top to bottom)
+  if (showLeft) {
+    ctx.textAlign = 'right';
+    for (let i = 0; i < boardSize; i++) {
+      const y = dims.padding + i * dims.cellSize;
+      const x = dims.padding - 8;
+      ctx.fillText(String(boardSize - i), x, y);
+    }
+  }
+
+  // Right labels
+  if (showRight) {
+    ctx.textAlign = 'left';
+    for (let i = 0; i < boardSize; i++) {
+      const y = dims.padding + i * dims.cellSize;
+      const x = dims.padding + dims.gridSize + 8;
+      ctx.fillText(String(boardSize - i), x, y);
+    }
+  }
+}

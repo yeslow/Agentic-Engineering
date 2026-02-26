@@ -14,6 +14,7 @@ import {
   coordinateToPixel,
   drawBoard,
   drawStone,
+  drawCoordinates,
 } from '../../lib/boardRenderer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,9 @@ export function QuizMode() {
     if (!ctx) return;
 
     drawBoard(ctx, size, size, 19);
+
+    // Draw coordinates
+    drawCoordinates(ctx, size, 19);
 
     const dims = calculateBoardDimensions(size, 19);
 

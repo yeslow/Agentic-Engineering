@@ -9,6 +9,7 @@ import {
   drawLastMoveMarker,
   drawGhostStone,
   drawKoMarker,
+  drawCoordinates,
 } from '../../lib/boardRenderer';
 // Coordinate type is used via store
 
@@ -37,6 +38,9 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
 
     // Draw board background and grid
     drawBoard(ctx, size, size, board.size);
+
+    // Draw coordinates
+    drawCoordinates(ctx, size, board.size);
 
     // Draw stones
     const dims = calculateBoardDimensions(size, board.size);
