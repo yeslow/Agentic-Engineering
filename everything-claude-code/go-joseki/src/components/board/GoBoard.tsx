@@ -8,6 +8,7 @@ import {
   drawStone,
   drawLastMoveMarker,
   drawGhostStone,
+  drawKoMarker,
 } from '../../lib/boardRenderer';
 // Coordinate type is used via store
 
@@ -67,6 +68,12 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     if (hoverCoord) {
       const { x, y } = coordinateToPixel(hoverCoord, dims);
       drawGhostStone(ctx, x, y, dims.stoneRadius, currentColor);
+    }
+
+    // Draw ko point marker
+    if (board.koPoint) {
+      const { x, y } = coordinateToPixel(board.koPoint, dims);
+      drawKoMarker(ctx, x, y);
     }
   }, [board, hoverCoord, currentColor, size]);
 

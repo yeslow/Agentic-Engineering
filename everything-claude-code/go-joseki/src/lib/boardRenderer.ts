@@ -282,3 +282,17 @@ export function drawGhostStone(
   ctx.fill();
   ctx.globalAlpha = 1;
 }
+
+/**
+ * Draw ko point marker (a square mark indicating the ko point)
+ */
+export function drawKoMarker(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number = 8
+): void {
+  ctx.strokeStyle = '#FF4444';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x - size / 2, y - size / 2, size, size);
+}
