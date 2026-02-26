@@ -31,18 +31,28 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     gameMode,
     trialStones,
     trialMoveCount,
+    trialCapturedStones,
   } = useBoardStore();
 
   // Determine the color for trial move (based on current board state + trial moves)
   const getTrialColor = useCallback(() => {
-    const boardMoveCount = board.moveHistory.length;
+    // Use board.currentMoveNumber to handle viewing mode correctly
+    const boardMoveCount = board.currentMoveNumber;
     const totalMoveCount = boardMoveCount + trialMoveCount;
     return totalMoveCount % 2 === 0 ? 'black' : 'white';
-  }, [board.moveHistory.length, trialMoveCount]);
+  }, [board.currentMoveNumber, trialMoveCount]);
 
   // Check if a coordinate is occupied by board stones or trial stones
   const isOccupied = useCallback(
     (coord: Coordinate) => {
+      // Check if captured in trial mode
+      const isTrialCaptured =
+        trialCapturedStones.black.some(([x, y]) => x === coord[0] && y === coord[1]) ||
+        trialCapturedStones.white.some(([x, y]) => x === coord[0] && y === coord[1]);
+      if (isTrialCaptured) {
+        return false; // Captured stones are not considered occupied
+      }
+
       const isBoardOccupied =
         board.stones.black.some(([x, y]) => x === coord[0] && y === coord[1]) ||
         board.stones.white.some(([x, y]) => x === coord[0] && y === coord[1]);
@@ -51,7 +61,7 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
         trialStones.white.some(([x, y]) => x === coord[0] && y === coord[1]);
       return isBoardOccupied || isTrialOccupied;
     },
-    [board.stones, trialStones]
+    [board.stones, trialStones, trialCapturedStones]
   );
 
   // Draw the board
@@ -71,20 +81,36 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     // Draw stones
     const dims = calculateBoardDimensions(size, board.size);
 
-    // Draw black stones
+    // Helper to check if a black stone is captured in trial mode (captured by white)
+    const isBlackCapturedInTrial = (coord: Coordinate) =>
+      trialCapturedStones.white.some(([x, y]) => x === coord[0] && y === coord[1]);
+
+    // Helper to check if a white stone is captured in trial mode (captured by black)
+    const isWhiteCapturedInTrial = (coord: Coordinate) =>
+      trialCapturedStones.black.some(([x, y]) => x === coord[0] && y === coord[1]);
+
+    // Draw black stones (filter out captured stones)
     for (const coord of board.stones.black) {
+      if (isBlackCapturedInTrial(coord)) continue;
       const { x, y } = coordinateToPixel(coord, dims);
       drawStone(ctx, x, y, dims.stoneRadius, 'black');
     }
 
-    // Draw white stones
+    // Draw white stones (filter out captured stones)
     for (const coord of board.stones.white) {
+      if (isWhiteCapturedInTrial(coord)) continue;
       const { x, y } = coordinateToPixel(coord, dims);
       drawStone(ctx, x, y, dims.stoneRadius, 'white');
     }
 
-    // Draw last move marker (only for main board stones)
-    if (board.lastMove) {
+    // Draw last move marker (only for main board stones, and not if captured)
+    const isLastMoveCaptured =
+      (board.stones.black.some(([bx, by]) => bx === board.lastMove![0] && by === board.lastMove![1]) &&
+        isBlackCapturedInTrial(board.lastMove!)) ||
+      (board.stones.white.some(([wx, wy]) => wx === board.lastMove![0] && wy === board.lastMove![1]) &&
+        isWhiteCapturedInTrial(board.lastMove!));
+
+    if (board.lastMove && !isLastMoveCaptured) {
       const { x, y } = coordinateToPixel(board.lastMove, dims);
       const lastMoveColor = board.stones.black.some(
         ([bx, by]) => bx === board.lastMove![0] && by === board.lastMove![1]
@@ -95,11 +121,16 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     }
 
     // Draw trial stones (semi-transparent with dashed border)
+    // Filter out captured trial stones
     for (const coord of trialStones.black) {
+      // Skip if this trial stone was captured by white
+      if (trialCapturedStones.white.some(([x, y]) => x === coord[0] && y === coord[1])) continue;
       const { x, y } = coordinateToPixel(coord, dims);
       drawTrialStone(ctx, x, y, dims.stoneRadius, 'black');
     }
     for (const coord of trialStones.white) {
+      // Skip if this trial stone was captured by black
+      if (trialCapturedStones.black.some(([x, y]) => x === coord[0] && y === coord[1])) continue;
       const { x, y } = coordinateToPixel(coord, dims);
       drawTrialStone(ctx, x, y, dims.stoneRadius, 'white');
     }
@@ -125,6 +156,7 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     gameMode,
     trialStones,
     trialMoveCount,
+    trialCapturedStones,
     isOccupied,
     getTrialColor,
   ]);

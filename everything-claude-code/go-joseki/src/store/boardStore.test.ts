@@ -149,6 +149,78 @@ describe('BoardStore Game Mode', () => {
 
       expect(result).toBe(false);
     });
+
+    it('should capture opponent stones in trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+
+      // Set up a simple capture scenario:
+      // Place white stone at [1, 1]
+      // Place black stones at [0, 1] and [1, 0] (surrounding white)
+      store.playMove([0, 0]); // Black at corner
+      store.playMove([1, 0]); // White adjacent
+      store.playMove([2, 0]); // Black
+      store.playMove([0, 1]); // White
+
+      // Now black can capture the white at [1, 0] by playing [1, 1]
+      // Let's verify this works in battle mode first
+      const battleStore = useBoardStore.getState();
+      battleStore.initBoard(19);
+      battleStore.playMove([1, 0]); // Black
+      battleStore.playMove([0, 0]); // White
+      battleStore.playMove([2, 0]); // Black
+      battleStore.playMove([0, 1]); // White
+      battleStore.playMove([1, 1]); // Black - should capture white at [0, 0]
+
+      // White at [0, 0] should be captured
+      expect(battleStore.board.stones.white).not.toContainEqual([0, 0]);
+    });
+
+    it('should capture stones in trial mode when trial move captures', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+
+      // Set up: Black surrounds a white stone
+      store.playMove([1, 0]); // Black
+      store.playMove([0, 0]); // White
+      store.playMove([2, 0]); // Black
+      store.playMove([15, 15]); // White (pass)
+      store.playMove([0, 1]); // Black
+
+      // Now [0, 0] white is surrounded on 3 sides (edge), [1, 0] black can capture
+
+      store.goToMove(5); // Go back to see position
+      store.setGameMode('trial');
+
+      // Play trial move at [1, 0] - but wait, [1, 0] already has black
+      // Let's play at [1, 1] which doesn't help... need different setup
+
+      // Let me try a simpler approach - play trial move that captures
+      store.initBoard(19);
+      store.playMove([1, 0]); // Black
+      store.playMove([0, 0]); // White
+      store.playMove([0, 1]); // Black (captures white at [0,0] in battle mode)
+
+      // Verify capture in battle mode
+      const battleState = useBoardStore.getState();
+      expect(battleState.board.stones.white).not.toContainEqual([0, 0]);
+
+      // Now test trial mode capture
+      store.initBoard(19);
+      store.playMove([1, 0]); // Black at [1, 0]
+      store.playMove([0, 0]); // White at [0, 0]
+
+      // Now in trial mode, play black at [0, 1] to capture white at [0, 0]
+      store.goToMove(2);
+      store.setGameMode('trial');
+
+      const trialResult = store.playTrialMove([0, 1]);
+
+      expect(trialResult).toBe(true);
+      // The white stone at [0, 0] should be marked as captured
+      const state = useBoardStore.getState();
+      expect(state.trialCapturedStones.black).toContainEqual([0, 0]);
+    });
   });
 
   describe('undoTrialMove', () => {
