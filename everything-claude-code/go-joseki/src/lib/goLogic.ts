@@ -107,6 +107,13 @@ export function wouldBeSuicide(
     return false;
   }
 
+  // Check if it connects to a friendly group that has liberties
+  const connectedGroup = getConnectedStones(simulatedBoard, coord, color);
+  const groupLiberties = getGroupLiberties(simulatedBoard, connectedGroup);
+  if (groupLiberties > 0) {
+    return false;
+  }
+
   // Check if it captures opponent stones
   const directions: Coordinate[] = [
     [0, 1],

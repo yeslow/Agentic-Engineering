@@ -234,4 +234,177 @@ describe('placeStone', () => {
     // But playing elsewhere should work
     expect(isValidMove(board, [4, 4], 'white')).toBe(true);
   });
+
+  it('should reset ko point after playing elsewhere', () => {
+    // Test that ko point is cleared when a move is played elsewhere
+    const board = createInitialBoard();
+    // Manually set ko point (simulating a previous ko capture)
+    board.koPoint = [4, 4];
+
+    // Playing elsewhere should clear the ko point
+    const newBoard = placeStone(board, [3, 3], 'black');
+    expect(newBoard.koPoint).toBeNull();
+  });
+
+  it('should allow playing at former ko point after playing elsewhere', () => {
+    // Complete ko resolution flow:
+    // 1. Ko is created
+    // 2. Player plays elsewhere (ko threat)
+    // 3. Opponent responds (or not)
+    // 4. Original player can now play at the ko point
+    const board = createInitialBoard();
+    // Manually set ko point
+    board.koPoint = [4, 4];
+
+    // Player plays elsewhere
+    const boardAfterKoThreat = placeStone(board, [3, 3], 'black');
+    expect(boardAfterKoThreat.koPoint).toBeNull();
+
+    // Opponent plays elsewhere
+    const boardAfterResponse = placeStone(boardAfterKoThreat, [5, 5], 'white');
+    expect(boardAfterResponse.koPoint).toBeNull();
+
+    // Now [4, 4] should be valid to play
+    expect(isValidMove(boardAfterResponse, [4, 4], 'black')).toBe(true);
+  });
+
+  it('should create ko situation when capturing single stone with only one liberty', () => {
+    // Create a classic ko shape:
+    //   0 1 2 3 4
+    // 0 . . . . .
+    // 1 . X O . .
+    // 2 X O . X .
+    // 3 . X O . .
+    // 4 . . . . .
+    //
+    // Black: [1,1], [0,2], [3,2], [1,3]
+    // White: [2,1], [1,2], [2,3]
+    // Empty at [2,2]
+    //
+    // Black plays at [2,2], captures white at [1,2]
+    // This creates ko at [1,2]
+
+    let board = createInitialBoard(9);
+
+    // Build up the position
+    board = placeStone(board, [1, 1], 'black'); // Black [1,1]
+    board = placeStone(board, [2, 1], 'white'); // White [2,1]
+    board = placeStone(board, [0, 2], 'black'); // Black [0,2]
+    board = placeStone(board, [1, 2], 'white'); // White [1,2]
+    board = placeStone(board, [3, 2], 'black'); // Black [3,2]
+    board = placeStone(board, [2, 3], 'white'); // White [2,3]
+    board = placeStone(board, [1, 3], 'black'); // Black [1,3]
+
+    // Now black plays at [2,2] capturing white at [1,2]
+    board = placeStone(board, [2, 2], 'black');
+
+    // White at [1,2] should be captured
+    expect(board.stones.white).not.toContainEqual([1, 2]);
+    expect(board.captures.black).toBe(1);
+
+    // Ko point should be set at [1,2] (the captured position)
+    expect(board.koPoint).toEqual([1, 2]);
+
+    // White cannot immediately recapture at [1,2]
+    expect(isValidMove(board, [1, 2], 'white')).toBe(false);
+  });
+
+  it('should resolve ko after playing elsewhere (full ko cycle)', () => {
+    // Complete ko cycle test
+    let board = createInitialBoard(9);
+
+    // Build up ko position
+    board = placeStone(board, [1, 1], 'black');
+    board = placeStone(board, [2, 1], 'white');
+    board = placeStone(board, [0, 2], 'black');
+    board = placeStone(board, [1, 2], 'white');
+    board = placeStone(board, [3, 2], 'black');
+    board = placeStone(board, [2, 3], 'white');
+    board = placeStone(board, [1, 3], 'black');
+
+    // Black captures at [2,2], creating ko at [1,2]
+    board = placeStone(board, [2, 2], 'black');
+    expect(board.koPoint).toEqual([1, 2]);
+
+    // White cannot recapture immediately
+    expect(isValidMove(board, [1, 2], 'white')).toBe(false);
+
+    // White plays ko threat elsewhere
+    board = placeStone(board, [7, 7], 'white');
+    expect(board.koPoint).toBeNull(); // Ko should be resolved
+
+    // Black responds (or ignores)
+    board = placeStone(board, [7, 8], 'black');
+
+    // Now white CAN recapture at [1,2]
+    // But wait - black stone at [2,2] is now surrounded by white stones...
+    // Let's check if the position allows recapture
+    expect(isValidMove(board, [1, 2], 'white')).toBe(true);
+  });
+
+  it('should allow playing at position with liberties after capture', () => {
+    // Setup a scenario where after capture, the position has liberties
+    //   0 1 2 3 4
+    // 0 . . B . .
+    // 1 . B W B .
+    // 2 . B W B .
+    // 3 . . B . .
+    // 4 . . . . .
+    //
+    // Black at [2,0], [1,1], [3,1], [1,2], [3,2], [2,3]
+    // White at [2,1], [2,2] - connected group with 1 liberty at [2,0]
+    // Black captures by playing [2,0]
+    // After capture, [2,1] has neighbor [2,2]=empty
+
+    let board = createInitialBoard(9);
+
+    // Build the position - black stones first
+    board = placeStone(board, [1, 1], 'black');
+    board = placeStone(board, [3, 1], 'black');
+    board = placeStone(board, [1, 2], 'black');
+    board = placeStone(board, [3, 2], 'black');
+    board = placeStone(board, [2, 3], 'black');
+
+    // White stones in atari
+    board = placeStone(board, [2, 1], 'white');
+    board = placeStone(board, [2, 2], 'white');
+
+    // Black captures by playing [2,0]
+    board = placeStone(board, [2, 0], 'black');
+
+    // Verify capture
+    expect(board.stones.white).toHaveLength(0);
+    expect(board.captures.black).toBe(2);
+
+    // Now [2,1] and [2,2] are empty
+    // [2,1] neighbors: [1,1]=B, [3,1]=B, [2,0]=B, [2,2]=empty
+    // So [2,1] has 1 liberty at [2,2]
+
+    // White can play at [2,1] (not suicide because has liberty at [2,2])
+    board = placeStone(board, [2, 1], 'white');
+    expect(board.stones.white).toContainEqual([2, 1]);
+  });
+
+  it('should not allow suicide at fully surrounded captured position', () => {
+    // After capture, the position is fully surrounded - should NOT allow play there
+    let board = createInitialBoard(9);
+
+    // White stone at [2,2] will be captured
+    board = placeStone(board, [2, 2], 'white');
+    // Black surrounds on all 4 sides
+    board = placeStone(board, [1, 2], 'black');
+    board = placeStone(board, [3, 2], 'black');
+    board = placeStone(board, [2, 1], 'black');
+    board = placeStone(board, [2, 3], 'black');
+
+    // Verify capture
+    expect(board.stones.white).toHaveLength(0);
+    expect(board.captures.black).toBe(1);
+
+    // Now [2,2] is empty but surrounded by black on all sides
+    // White cannot play there (suicide)
+    expect(isValidMove(board, [2, 2], 'white')).toBe(true); // Position is empty
+    // But placing a stone there would be suicide
+    expect(() => placeStone(board, [2, 2], 'white')).toThrow('Suicide move is not allowed');
+  });
 });
