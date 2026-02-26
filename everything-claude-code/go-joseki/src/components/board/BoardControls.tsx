@@ -3,12 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Undo2, Trash2, Download, Upload } from 'lucide-react';
+import { Undo2, Trash2, Download, Upload, Play, RotateCcw } from 'lucide-react';
 import { exportKifu, importKifuWithPicker } from '../../lib/kifuManager';
 import { useState } from 'react';
 
 export function BoardControls() {
-  const { resetBoard, undo, currentColor, board, loadBoard } = useBoardStore();
+  const {
+    resetBoard,
+    undo,
+    currentColor,
+    board,
+    loadBoard,
+    gameMode,
+    trialMoveCount,
+    exitTrialMode,
+    undoTrialMove,
+    clearTrialStones,
+  } = useBoardStore();
   const [importError, setImportError] = useState<string | null>(null);
 
   const handleExport = () => {
@@ -26,6 +37,8 @@ export function BoardControls() {
       console.error('Failed to import kifu:', error);
     }
   };
+
+  const hasTrialStones = trialMoveCount > 0;
 
   return (
     <Card>
@@ -45,6 +58,17 @@ export function BoardControls() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Game Mode Indicator */}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">模式</span>
+          <Badge
+            variant={gameMode === 'battle' ? 'default' : 'secondary'}
+            className={gameMode === 'trial' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+          >
+            {gameMode === 'battle' ? '对战' : '试下'}
+          </Badge>
+        </div>
+
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">手数</span>
           <Badge variant="secondary">{board.currentMoveNumber}</Badge>
@@ -68,6 +92,53 @@ export function BoardControls() {
 
         <Separator />
 
+        {/* Trial Mode Controls */}
+        {gameMode === 'trial' && (
+          <>
+            <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+              试下模式：落子不会保存到棋谱
+              {hasTrialStones && (
+                <span className="block mt-1">
+                  已下 {trialMoveCount} 手试下棋子
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={undoTrialMove}
+                disabled={!hasTrialStones}
+                className="flex-1"
+              >
+                <Undo2 className="h-4 w-4 mr-1" />
+                撤销试下
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearTrialStones}
+                disabled={!hasTrialStones}
+                className="flex-1"
+              >
+                <RotateCcw className="h-4 w-4 mr-1" />
+                清除试下
+              </Button>
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={exitTrialMode}
+              className="w-full"
+            >
+              <Play className="h-4 w-4 mr-1" />
+              返回实战
+            </Button>
+            <Separator />
+          </>
+        )}
+
+        {/* Battle Mode Controls */}
         <div className="flex gap-2">
           <Button
             variant="outline"

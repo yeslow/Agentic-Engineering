@@ -3,6 +3,8 @@ export type Coordinate = [number, number];
 
 export type StoneColor = 'black' | 'white';
 
+export type GameMode = 'battle' | 'trial';
+
 export interface Move {
   coordinate: Coordinate;
   color: StoneColor;

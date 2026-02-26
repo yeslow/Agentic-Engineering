@@ -1,6 +1,263 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useBoardStore } from './boardStore';
 
+describe('BoardStore Game Mode', () => {
+  beforeEach(() => {
+    useBoardStore.getState().initBoard(19);
+  });
+
+  describe('gameMode state', () => {
+    it('should initialize with battle mode by default', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+    });
+
+    it('should have trialStones state for temporary moves', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      expect(useBoardStore.getState().trialStones).toEqual({
+        black: [],
+        white: [],
+      });
+    });
+  });
+
+  describe('setGameMode', () => {
+    it('should switch from battle to trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+
+      store.setGameMode('trial');
+
+      expect(useBoardStore.getState().gameMode).toBe('trial');
+    });
+
+    it('should switch from trial to battle mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.setGameMode('trial');
+
+      store.setGameMode('battle');
+
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+    });
+
+    it('should clear trial stones when entering trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      // Add some trial stones first
+      store.setGameMode('trial');
+      store.playTrialMove([3, 3]);
+      store.playTrialMove([15, 15]);
+
+      // Switch to battle and back to trial
+      store.setGameMode('battle');
+      store.setGameMode('trial');
+
+      // Trial stones should be cleared when mode changes
+      expect(useBoardStore.getState().trialStones).toEqual({
+        black: [],
+        white: [],
+      });
+    });
+  });
+
+  describe('enterTrialMode and exitTrialMode', () => {
+    it('should enter trial mode from battle mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+
+      store.enterTrialMode();
+
+      expect(useBoardStore.getState().gameMode).toBe('trial');
+    });
+
+    it('should exit trial mode and return to battle mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.enterTrialMode();
+      expect(useBoardStore.getState().gameMode).toBe('trial');
+
+      store.exitTrialMode();
+
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+    });
+
+    it('should clear trial stones when exiting trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.enterTrialMode();
+      store.playTrialMove([3, 3]);
+      store.playTrialMove([15, 15]);
+
+      expect(useBoardStore.getState().trialStones.black.length).toBe(1);
+      expect(useBoardStore.getState().trialStones.white.length).toBe(1);
+
+      store.exitTrialMode();
+
+      expect(useBoardStore.getState().trialStones).toEqual({
+        black: [],
+        white: [],
+      });
+    });
+  });
+
+  describe('playTrialMove', () => {
+    it('should add a black stone to trialStones', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.setGameMode('trial');
+
+      store.playTrialMove([3, 3]);
+
+      expect(useBoardStore.getState().trialStones.black).toContainEqual([3, 3]);
+    });
+
+    it('should add a white stone to trialStones alternately', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.setGameMode('trial');
+
+      store.playTrialMove([3, 3]); // Black
+      store.playTrialMove([15, 15]); // White
+
+      expect(useBoardStore.getState().trialStones.black).toContainEqual([3, 3]);
+      expect(useBoardStore.getState().trialStones.white).toContainEqual([15, 15]);
+    });
+
+    it('should not modify main board stones', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([4, 4]); // Add to main board
+
+      store.setGameMode('trial');
+      store.playTrialMove([3, 3]); // Add to trial
+
+      expect(useBoardStore.getState().board.stones.black).toContainEqual([4, 4]);
+      expect(useBoardStore.getState().board.stones.black).not.toContainEqual([3, 3]);
+    });
+
+    it('should return false when trying to play on occupied spot in trial', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]); // Add to main board
+
+      store.setGameMode('trial');
+      const result = store.playTrialMove([3, 3]); // Try same spot
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('undoTrialMove', () => {
+    it('should remove the last trial move', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.setGameMode('trial');
+
+      store.playTrialMove([3, 3]); // Black
+      store.playTrialMove([15, 15]); // White
+
+      store.undoTrialMove();
+
+      expect(useBoardStore.getState().trialStones.black).toContainEqual([3, 3]);
+      expect(useBoardStore.getState().trialStones.white).toEqual([]);
+    });
+
+    it('should handle undo when no trial moves', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.setGameMode('trial');
+
+      store.undoTrialMove(); // Should not error
+
+      expect(useBoardStore.getState().trialStones).toEqual({
+        black: [],
+        white: [],
+      });
+    });
+  });
+
+  describe('clearTrialStones', () => {
+    it('should remove all trial stones', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.setGameMode('trial');
+
+      store.playTrialMove([3, 3]);
+      store.playTrialMove([15, 15]);
+      store.playTrialMove([3, 15]);
+
+      store.clearTrialStones();
+
+      expect(useBoardStore.getState().trialStones).toEqual({
+        black: [],
+        white: [],
+      });
+    });
+  });
+
+  describe('playMove in trial mode', () => {
+    it('should not allow playMove in trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.setGameMode('trial');
+
+      const result = store.playMove([3, 3]);
+
+      expect(result).toBe(false);
+      // Main board should not change
+      expect(useBoardStore.getState().board.stones.black).toEqual([]);
+    });
+
+    it('should allow playMove in battle mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+
+      const result = store.playMove([3, 3]);
+
+      expect(result).toBe(true);
+      expect(useBoardStore.getState().board.stones.black).toContainEqual([3, 3]);
+    });
+  });
+
+  describe('auto enter trial mode when navigating', () => {
+    it('should auto enter trial mode when navigating to middle of game', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.playMove([3, 15]);
+
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+
+      // Navigate to middle
+      store.goToMove(1);
+
+      // Should auto enter trial mode
+      expect(useBoardStore.getState().gameMode).toBe('trial');
+    });
+
+    it('should stay in battle mode when at the end of moves', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+
+      // Navigate to end (same position)
+      store.goToMove(2);
+
+      // Should stay in battle mode
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+    });
+  });
+});
+
 describe('BoardStore Navigation', () => {
   beforeEach(() => {
     // Reset store before each test
@@ -45,10 +302,16 @@ describe('BoardStore Navigation', () => {
       store.goToPrevious();
 
       expect(useBoardStore.getState().isViewingMode).toBe(true);
+      expect(useBoardStore.getState().gameMode).toBe('trial');
 
-      // Play new move should exit viewing mode
-      store.playMove([15, 3]);
+      // In trial mode, playMove should be rejected
+      // User needs to exit trial mode first
+      store.exitTrialMode();
+      expect(useBoardStore.getState().gameMode).toBe('battle');
 
+      // Now playMove should work
+      const result = store.playMove([15, 3]);
+      expect(result).toBe(true);
       expect(useBoardStore.getState().isViewingMode).toBe(false);
     });
   });

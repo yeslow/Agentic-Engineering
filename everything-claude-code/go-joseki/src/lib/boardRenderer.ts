@@ -284,6 +284,38 @@ export function drawGhostStone(
 }
 
 /**
+ * Draw trial stone (semi-transparent with dashed border for study mode)
+ */
+export function drawTrialStone(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  color: StoneColor
+): void {
+  // Draw semi-transparent stone
+  ctx.globalAlpha = 0.6;
+
+  // Base circle
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = color === 'black' ? '#2B2B2B' : '#F0F0F0';
+  ctx.fill();
+
+  // Reset alpha
+  ctx.globalAlpha = 1;
+
+  // Draw dashed border to distinguish trial stones
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = color === 'black' ? '#666666' : '#999999';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/**
  * Draw ko point marker (a square mark indicating the ko point)
  */
 export function drawKoMarker(

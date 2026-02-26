@@ -2,7 +2,8 @@ import { useBoardStore } from '../../store/boardStore';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Play } from 'lucide-react';
 import { useEffect } from 'react';
 
 export function MoveProgress() {
@@ -14,6 +15,8 @@ export function MoveProgress() {
     goToNext,
     goToLastMove,
     isViewingMode,
+    gameMode,
+    exitTrialMode,
   } = useBoardStore();
 
   const totalMoves = board.moveHistory.length;
@@ -60,11 +63,21 @@ export function MoveProgress() {
               <span className="text-muted-foreground">
                 进度 {currentViewMove}/{totalMoves}
               </span>
-              {isViewingMode && (
-                <span className="text-xs text-primary font-medium">
-                  查看模式
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {gameMode === 'trial' && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-amber-600 hover:bg-amber-700"
+                  >
+                    试下模式
+                  </Badge>
+                )}
+                {isViewingMode && gameMode !== 'trial' && (
+                  <Badge variant="outline">
+                    查看中
+                  </Badge>
+                )}
+              </div>
             </div>
             <Slider
               value={[currentViewMove]}
@@ -141,6 +154,19 @@ export function MoveProgress() {
               </Button>
             </div>
           </div>
+
+          {/* Return to Battle Button (shown in trial mode when viewing past moves) */}
+          {gameMode === 'trial' && isViewingMode && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={exitTrialMode}
+              className="w-full"
+            >
+              <Play className="h-4 w-4 mr-1" />
+              返回实战模式
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

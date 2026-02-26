@@ -8,10 +8,11 @@ import {
   drawStone,
   drawLastMoveMarker,
   drawGhostStone,
+  drawTrialStone,
   drawKoMarker,
   drawCoordinates,
 } from '../../lib/boardRenderer';
-// Coordinate type is used via store
+import type { Coordinate } from '../../types/go';
 
 interface GoBoardProps {
   size?: number;
@@ -25,8 +26,33 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     currentColor,
     hoverCoord,
     playMove,
+    playTrialMove,
     setHoverCoord,
+    gameMode,
+    trialStones,
+    trialMoveCount,
   } = useBoardStore();
+
+  // Determine the color for trial move (based on current board state + trial moves)
+  const getTrialColor = useCallback(() => {
+    const boardMoveCount = board.moveHistory.length;
+    const totalMoveCount = boardMoveCount + trialMoveCount;
+    return totalMoveCount % 2 === 0 ? 'black' : 'white';
+  }, [board.moveHistory.length, trialMoveCount]);
+
+  // Check if a coordinate is occupied by board stones or trial stones
+  const isOccupied = useCallback(
+    (coord: Coordinate) => {
+      const isBoardOccupied =
+        board.stones.black.some(([x, y]) => x === coord[0] && y === coord[1]) ||
+        board.stones.white.some(([x, y]) => x === coord[0] && y === coord[1]);
+      const isTrialOccupied =
+        trialStones.black.some(([x, y]) => x === coord[0] && y === coord[1]) ||
+        trialStones.white.some(([x, y]) => x === coord[0] && y === coord[1]);
+      return isBoardOccupied || isTrialOccupied;
+    },
+    [board.stones, trialStones]
+  );
 
   // Draw the board
   useEffect(() => {
@@ -57,7 +83,7 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
       drawStone(ctx, x, y, dims.stoneRadius, 'white');
     }
 
-    // Draw last move marker
+    // Draw last move marker (only for main board stones)
     if (board.lastMove) {
       const { x, y } = coordinateToPixel(board.lastMove, dims);
       const lastMoveColor = board.stones.black.some(
@@ -68,10 +94,22 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
       drawLastMoveMarker(ctx, x, y, lastMoveColor);
     }
 
-    // Draw hover ghost stone
-    if (hoverCoord) {
+    // Draw trial stones (semi-transparent with dashed border)
+    for (const coord of trialStones.black) {
+      const { x, y } = coordinateToPixel(coord, dims);
+      drawTrialStone(ctx, x, y, dims.stoneRadius, 'black');
+    }
+    for (const coord of trialStones.white) {
+      const { x, y } = coordinateToPixel(coord, dims);
+      drawTrialStone(ctx, x, y, dims.stoneRadius, 'white');
+    }
+
+    // Draw hover ghost stone (only if not occupied)
+    if (hoverCoord && !isOccupied(hoverCoord)) {
       const { x, y } = coordinateToPixel(hoverCoord, dims);
-      drawGhostStone(ctx, x, y, dims.stoneRadius, currentColor);
+      // In trial mode, show color based on trial move count
+      const hoverColor = gameMode === 'trial' ? getTrialColor() : currentColor;
+      drawGhostStone(ctx, x, y, dims.stoneRadius, hoverColor);
     }
 
     // Draw ko point marker
@@ -79,7 +117,17 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
       const { x, y } = coordinateToPixel(board.koPoint, dims);
       drawKoMarker(ctx, x, y);
     }
-  }, [board, hoverCoord, currentColor, size]);
+  }, [
+    board,
+    hoverCoord,
+    currentColor,
+    size,
+    gameMode,
+    trialStones,
+    trialMoveCount,
+    isOccupied,
+    getTrialColor,
+  ]);
 
   // Handle click
   const handleClick = useCallback(
@@ -95,10 +143,16 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
       const coord = pixelToCoordinate({ x, y }, dims);
 
       if (coord) {
-        playMove(coord);
+        if (gameMode === 'trial') {
+          // In trial mode, play trial move
+          playTrialMove(coord);
+        } else {
+          // In battle mode, play normal move
+          playMove(coord);
+        }
       }
     },
-    [board.size, playMove, size]
+    [board.size, playMove, playTrialMove, size, gameMode]
   );
 
   // Handle mouse move
