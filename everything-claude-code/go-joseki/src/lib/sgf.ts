@@ -166,6 +166,7 @@ export function sgfToBoard(sgf: string): {
   }
 
   // Replay moves to build board state (stones, captures, etc.)
+  // Use placeStone which will correctly track currentMoveNumber
   for (const move of moves) {
     try {
       board = placeStone(board, move.coordinate, move.color);
@@ -176,8 +177,8 @@ export function sgfToBoard(sgf: string): {
   }
 
   // Preserve original move history with comments from SGF
+  // currentMoveNumber is already correct from placeStone calls
   board.moveHistory = moves;
-  board.currentMoveNumber = moves.length;
 
   return {
     board,
