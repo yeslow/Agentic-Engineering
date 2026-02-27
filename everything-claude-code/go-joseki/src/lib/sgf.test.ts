@@ -313,6 +313,17 @@ describe('SGF Serialization', () => {
       // Should only have 3 moves from main line
       expect(board.moveHistory.length).toBe(3);
     });
+
+    it('should handle SGF where all moves are in the first variation', () => {
+      // Some SGF files put all moves in the first variation
+      // (;FF[4]...(;B[dd];W[dp];B[pd]))
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki](;B[dd];W[dp];B[pd];W[dc]))';
+      const result = sgfToBoard(sgf);
+      const board = result.board;
+
+      // Should have 4 moves from the first variation
+      expect(board.moveHistory.length).toBe(4);
+    });
   });
 });
 

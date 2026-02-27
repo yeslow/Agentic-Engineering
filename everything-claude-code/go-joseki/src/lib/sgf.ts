@@ -113,9 +113,10 @@ export function sgfToBoard(sgf: string): {
   // Remove whitespace outside of nodes
   const trimmed = sgf.trim();
 
-  // Extract root node - match (; followed by all properties until next node (;) or end of tree ()
+  // Extract root node - match (; followed by properties until next node (;), variation (, or end of tree ()
   // SGF format: (;FF[4]GM[1]SZ[19]PB[Black]PW[White]...)
-  const rootMatch = trimmed.match(/^\(\s*;([^\(]*?)(?=;|\))/);
+  // Also handles format where all moves are in first variation: (;FF[4]...(;B[dd];W[dp]))
+  const rootMatch = trimmed.match(/^\(\s*;([^\(]*?)(?=;|\(|\))/);
   if (!rootMatch) {
     throw new Error('Invalid SGF format: missing root node');
   }
@@ -203,31 +204,56 @@ export function sgfToBoard(sgf: string): {
 
 /**
  * Extract the main line from SGF content
- * The main line is the first sequence of moves, ignoring all variations in parentheses
+ * The main line is the first sequence of moves, ignoring all other variations in parentheses
+ *
+ * Special case: If the main line has no moves but the first variation does,
+ * use the first variation as the main line (some SGF files use this format)
  */
 function extractMainLine(sgf: string): string {
   let result = '';
   let depth = 0;
   let inVariation = false;
+  let firstVariationStart = -1;
+  let firstVariationEnd = -1;
 
   for (let i = 0; i < sgf.length; i++) {
     const char = sgf[i];
 
     if (char === '(') {
       depth++;
-      // If this is a variation (not the root), skip it
-      if (depth > 1 && !inVariation) {
+      // Track the start of the first variation
+      if (depth === 2 && firstVariationStart === -1) {
+        firstVariationStart = i;
+        inVariation = true;
+      } else if (depth > 1 && !inVariation) {
         inVariation = true;
       }
     } else if (char === ')') {
       depth--;
-      // End of a variation
+      // Track the end of the first variation
+      if (depth === 1 && firstVariationStart !== -1 && firstVariationEnd === -1) {
+        firstVariationEnd = i;
+      }
       if (depth < 2) {
         inVariation = false;
       }
     } else if (!inVariation) {
       // Only add characters from the main line
       result += char;
+    }
+  }
+
+  // Check if the main line has any moves
+  const moveRegex = /;([BW])\[([a-y]{2})\]/;
+  const hasMoves = moveRegex.test(result);
+
+  // If main line has no moves but first variation does, use first variation
+  if (!hasMoves && firstVariationStart !== -1 && firstVariationEnd !== -1) {
+    const firstVariation = sgf.substring(firstVariationStart, firstVariationEnd + 1);
+    const variationHasMoves = moveRegex.test(firstVariation);
+    if (variationHasMoves) {
+      // Extract content from first variation (remove outer parentheses)
+      return firstVariation.substring(1, firstVariation.length - 1);
     }
   }
 
