@@ -340,7 +340,7 @@ export function drawStoneWithNumber(
 /**
  * Draw a trial stone with a move number label
  * Trial stones use the same visual style as battle mode stones,
- * only the move number label is different (smaller, in parentheses style)
+ * only the move number label is slightly smaller
  */
 export function drawTrialStoneWithNumber(
   ctx: CanvasRenderingContext2D,
@@ -353,18 +353,9 @@ export function drawTrialStoneWithNumber(
   // Draw the same stone style as battle mode
   drawStone(ctx, x, y, radius, color);
 
-  // Draw the move number with different style (smaller, with subtle background)
-  // Use a slightly muted color to distinguish from battle mode
-  ctx.fillStyle = color === 'black' ? 'rgba(200, 200, 200, 0.9)' : 'rgba(80, 80, 80, 0.9)';
-
-  // Draw a small circle background for the number
-  ctx.beginPath();
-  ctx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Draw the number
+  // Draw the number (no background, just text)
   ctx.fillStyle = color === 'black' ? '#FFFFFF' : '#000000';
-  ctx.font = `bold ${Math.floor(radius * 0.7)}px sans-serif`;
+  ctx.font = `bold ${Math.floor(radius * 0.9)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(String(moveNumber), x, y);
