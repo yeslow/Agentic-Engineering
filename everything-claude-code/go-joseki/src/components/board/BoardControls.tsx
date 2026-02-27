@@ -368,13 +368,13 @@ export function BoardControls() {
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between">
           <span>棋盘控制</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <div
               className={`w-5 h-5 rounded-full border border-border ${
                 currentColor === 'black' ? 'bg-stone-black' : 'bg-stone-white'
               }`}
             />
-            <span className="text-sm font-normal text-muted-foreground">
+            <span className="text-sm font-normal text-muted-foreground whitespace-nowrap">
               {currentColor === 'black' ? '黑棋' : '白棋'}
             </span>
           </div>
@@ -426,7 +426,7 @@ export function BoardControls() {
               <div className="w-3 h-3 rounded-full bg-stone-black" />
               <span className="text-muted-foreground">黑棋</span>
             </div>
-            <span className="font-medium">
+            <span className="font-medium truncate max-w-[120px]">
               {currentPlayers?.blackPlayer || '未设置'}
             </span>
           </div>
@@ -435,7 +435,7 @@ export function BoardControls() {
               <div className="w-3 h-3 rounded-full bg-stone-white border" />
               <span className="text-muted-foreground">白棋</span>
             </div>
-            <span className="font-medium">
+            <span className="font-medium truncate max-w-[120px]">
               {currentPlayers?.whitePlayer || '未设置'}
             </span>
           </div>
@@ -447,7 +447,8 @@ export function BoardControls() {
               className="flex-1"
             >
               <User className="h-4 w-4 mr-1" />
-              设置棋手
+              <span className="hidden sm:inline">设置棋手</span>
+              <span className="sm:hidden">棋手</span>
             </Button>
             <Button
               variant="outline"
@@ -461,13 +462,14 @@ export function BoardControls() {
               className="flex-1"
             >
               <Trophy className="h-4 w-4 mr-1" />
-              设置胜者
+              <span className="hidden sm:inline">设置胜者</span>
+              <span className="sm:hidden">胜者</span>
             </Button>
           </div>
           {currentWinner && (
             <div className="flex items-center gap-2 text-sm bg-primary/10 p-2 rounded">
               <Trophy className="h-4 w-4 text-primary" />
-              <span className="font-medium text-primary">{currentWinner}</span>
+              <span className="font-medium text-primary truncate">{currentWinner}</span>
             </div>
           )}
         </div>
@@ -485,26 +487,28 @@ export function BoardControls() {
                 </span>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={undoTrialMove}
                 disabled={!hasTrialStones}
-                className="flex-1"
+                className="w-full"
               >
-                <Undo2 className="h-4 w-4 mr-1" />
-                撤销试下
+                <Undo2 className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">撤销试下</span>
+                <span className="sm:hidden">撤销</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={clearTrialStones}
                 disabled={!hasTrialStones}
-                className="flex-1"
+                className="w-full"
               >
-                <RotateCcw className="h-4 w-4 mr-1" />
-                清除试下
+                <RotateCcw className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">清除试下</span>
+                <span className="sm:hidden">清除</span>
               </Button>
             </div>
             <Button
@@ -514,7 +518,7 @@ export function BoardControls() {
               disabled={!hasTrialStones}
               className="w-full bg-purple-600 hover:bg-purple-700"
             >
-              <GitBranch className="h-4 w-4 mr-1" />
+              <GitBranch className="h-4 w-4 sm:mr-1" />
               保存变化图
             </Button>
             <Button
@@ -526,7 +530,7 @@ export function BoardControls() {
               }}
               className="w-full"
             >
-              <Play className="h-4 w-4 mr-1" />
+              <Play className="h-4 w-4 sm:mr-1" />
               返回实战
             </Button>
             <Separator />
@@ -540,57 +544,74 @@ export function BoardControls() {
         )}
 
         {/* Battle Mode Controls */}
-        <div className="flex gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <Button
             variant="default"
             size="sm"
             onClick={handleSaveClick}
             disabled={board.moveHistory.length === 0}
-            className="flex-1"
+            className="w-full"
           >
-            <Save className="h-4 w-4 mr-1" />
-            保存
+            <Save className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">保存</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={undo}
             disabled={board.moveHistory.length === 0}
-            className="flex-1"
+            className="w-full"
           >
-            <Undo2 className="h-4 w-4 mr-1" />
-            悔棋
+            <Undo2 className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">悔棋</span>
           </Button>
-        </div>
-
-        <div className="flex gap-2">
           <Button
             variant="destructive"
             size="sm"
             onClick={handleResetBoard}
-            className="flex-1"
+            className="w-full"
           >
-            <Trash2 className="h-4 w-4 mr-1" />
-            清空
+            <Trash2 className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">清空</span>
           </Button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={handleExport}
             disabled={board.moveHistory.length === 0}
-            className="flex-1"
+            className="w-full"
           >
-            <Download className="h-4 w-4 mr-1" />
-            导出
+            <Download className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">导出</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleImport}
-            className="flex-1"
+            className="w-full"
           >
-            <Upload className="h-4 w-4 mr-1" />
-            导入
+            <Upload className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">导入</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const kifu = currentKifuId ? getKifu(currentKifuId) : null;
+              if (kifu?.winner) {
+                setWinnerEditDialog({
+                  open: true,
+                  winner: kifu.winner,
+                });
+              }
+            }}
+            className="w-full"
+          >
+            <Trophy className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">结果</span>
           </Button>
         </div>
       </CardContent>

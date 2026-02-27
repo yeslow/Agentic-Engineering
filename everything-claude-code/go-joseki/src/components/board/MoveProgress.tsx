@@ -6,8 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Play } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
+import { cn } from '@/lib/utils';
 
-export function MoveProgress() {
+interface MoveProgressProps {
+  compact?: boolean;
+}
+
+export function MoveProgress({ compact = false }: MoveProgressProps) {
   const {
     currentViewMove,
     board,
@@ -68,12 +73,12 @@ export function MoveProgress() {
   }, [totalMoves, gameMode, goToMove, goToPrevious, goToNext, goToLastMove, redoTrialMove]);
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="space-y-4">
+    <Card className={compact ? 'shadow-lg' : 'shadow-xl'}>
+      <CardContent className={cn("pt-3 sm:pt-4", compact && 'py-2 sm:py-3')}>
+        <div className={cn("space-y-3 sm:space-y-4", compact && 'space-y-2 sm:space-y-3')}>
           {/* Progress Bar */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
               <span className="text-muted-foreground">
                 进度 {currentMoveIndex}/{totalMoves}
               </span>
@@ -81,13 +86,13 @@ export function MoveProgress() {
                 {gameMode === 'trial' && (
                   <Badge
                     variant="secondary"
-                    className="bg-amber-600 hover:bg-amber-700"
+                    className="bg-amber-600 hover:bg-amber-700 text-xs"
                   >
                     试下模式
                   </Badge>
                 )}
                 {isViewingMode && gameMode !== 'trial' && (
-                  <Badge variant="outline">
+                  <Badge variant="outline" className="text-xs">
                     查看中
                   </Badge>
                 )}
@@ -107,43 +112,45 @@ export function MoveProgress() {
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-1 sm:gap-2">
             <div className="flex gap-1">
               <Button
                 variant="outline"
-                size="icon"
+                size={compact ? 'sm' : 'default'}
                 onClick={() => goToMove(0)}
                 disabled={currentMoveIndex === 0 || totalMoves === 0}
                 title="跳到开始"
+                className={cn("h-7 w-7 sm:h-8 sm:w-8", compact && 'h-6 w-6 sm:h-7 sm:w-7')}
               >
-                <ChevronsLeft className="h-4 w-4" />
+                <ChevronsLeft className={cn("h-3 w-3 sm:h-4 sm:w-4", compact && 'h-2.5 w-2.5 sm:h-3 sm:w-3')} />
               </Button>
               <Button
                 variant="outline"
-                size="icon"
+                size={compact ? 'sm' : 'default'}
                 onClick={goToPrevious}
                 disabled={currentMoveIndex === 0 || totalMoves === 0}
                 title="后退一手"
+                className={cn("h-7 w-7 sm:h-8 sm:w-8", compact && 'h-6 w-6 sm:h-7 sm:w-7')}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className={cn("h-3 w-3 sm:h-4 sm:w-4", compact && 'h-2.5 w-2.5 sm:h-3 sm:w-3')} />
               </Button>
             </div>
 
             {/* Current Move Display */}
-            <div className="flex-1 text-center">
+            <div className="flex-1 text-center px-2">
               {currentMove ? (
-                <div className="text-sm">
-                  <span className="font-medium">
+                <div className={cn("font-medium", compact ? 'text-xs' : 'text-xs sm:text-sm')}>
+                  <span>
                     第{currentMove.moveNumber}手：{currentMove.color === 'black' ? '黑' : '白'}
                   </span>
                   {currentMove.comment && (
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className={cn("text-muted-foreground mt-0.5 truncate", compact ? 'text-[10px]' : 'text-xs')}>
                       {currentMove.comment}
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground">
+                <div className={cn("text-muted-foreground", compact ? 'text-xs' : 'text-xs sm:text-sm')}>
                   {totalMoves === 0 ? '未开始' : '初始状态'}
                 </div>
               )}
@@ -152,7 +159,7 @@ export function MoveProgress() {
             <div className="flex gap-1">
               <Button
                 variant="outline"
-                size="icon"
+                size={compact ? 'sm' : 'default'}
                 onClick={() => {
                   if (gameMode === 'trial') {
                     redoTrialMove();
@@ -162,17 +169,19 @@ export function MoveProgress() {
                 }}
                 disabled={gameMode === 'trial' ? trialRedoStack.length === 0 : currentMoveIndex >= totalMoves || totalMoves === 0}
                 title="前进一手"
+                className={cn("h-7 w-7 sm:h-8 sm:w-8", compact && 'h-6 w-6 sm:h-7 sm:w-7')}
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className={cn("h-3 w-3 sm:h-4 sm:w-4", compact && 'h-2.5 w-2.5 sm:h-3 sm:w-3')} />
               </Button>
               <Button
                 variant="outline"
-                size="icon"
+                size={compact ? 'sm' : 'default'}
                 onClick={goToLastMove}
                 disabled={currentMoveIndex >= totalMoves || totalMoves === 0}
                 title="跳到最新"
+                className={cn("h-7 w-7 sm:h-8 sm:w-8", compact && 'h-6 w-6 sm:h-7 sm:w-7')}
               >
-                <ChevronsRight className="h-4 w-4" />
+                <ChevronsRight className={cn("h-3 w-3 sm:h-4 sm:w-4", compact && 'h-2.5 w-2.5 sm:h-3 sm:w-3')} />
               </Button>
             </div>
           </div>
@@ -184,7 +193,7 @@ export function MoveProgress() {
               size="sm"
               onClick={() => {
                 exitTrialMode();
-                setCurrentVariationId(null); // Clear current variation when exiting to battle mode
+                setCurrentVariationId(null);
               }}
               className="w-full"
             >
