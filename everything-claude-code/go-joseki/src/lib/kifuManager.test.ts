@@ -56,4 +56,34 @@ describe('importKifu', () => {
 
     expect(result.kifuName).toBe('围棋棋谱');
   });
+
+  it('should extract black and white player names from SGF', async () => {
+    const sgfContent = '(;FF[4]GM[1]SZ[19]PB[Black Player]PW[White Player]AP[GoJoseki];B[dd];W[dp])';
+    const file = new File([sgfContent], 'test.sgf', { type: 'application/x-go-sgf' });
+
+    const result = await importKifu(file);
+
+    expect(result.blackPlayer).toBe('Black Player');
+    expect(result.whitePlayer).toBe('White Player');
+  });
+
+  it('should handle SGF with Chinese player names', async () => {
+    const sgfContent = '(;FF[4]GM[1]SZ[19]PB[黑方棋手]PW[白方棋手]AP[GoJoseki];B[dd];W[dp])';
+    const file = new File([sgfContent], 'test.sgf', { type: 'application/x-go-sgf' });
+
+    const result = await importKifu(file);
+
+    expect(result.blackPlayer).toBe('黑方棋手');
+    expect(result.whitePlayer).toBe('白方棋手');
+  });
+
+  it('should handle SGF without player names', async () => {
+    const sgfContent = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp])';
+    const file = new File([sgfContent], 'test.sgf', { type: 'application/x-go-sgf' });
+
+    const result = await importKifu(file);
+
+    expect(result.blackPlayer).toBeUndefined();
+    expect(result.whitePlayer).toBeUndefined();
+  });
 });

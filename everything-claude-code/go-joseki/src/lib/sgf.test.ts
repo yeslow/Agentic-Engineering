@@ -242,6 +242,32 @@ describe('SGF Serialization', () => {
     });
   });
 
+  describe('sgfToBoard player names', () => {
+    it('should extract black player name from PB property', () => {
+      const sgf = '(;FF[4]GM[1]SZ[19]PB[Black Player]PW[White Player]AP[GoJoseki];B[dd];W[dp])';
+      const result = sgfToBoard(sgf);
+
+      expect(result.blackPlayer).toBe('Black Player');
+      expect(result.whitePlayer).toBe('White Player');
+    });
+
+    it('should handle Chinese player names', () => {
+      const sgf = '(;FF[4]GM[1]SZ[19]PB[黑方棋手]PW[白方棋手]AP[GoJoseki];B[dd];W[dp])';
+      const result = sgfToBoard(sgf);
+
+      expect(result.blackPlayer).toBe('黑方棋手');
+      expect(result.whitePlayer).toBe('白方棋手');
+    });
+
+    it('should return undefined when player names are not provided', () => {
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp])';
+      const result = sgfToBoard(sgf);
+
+      expect(result.blackPlayer).toBeUndefined();
+      expect(result.whitePlayer).toBeUndefined();
+    });
+  });
+
   describe('sgfToBoard with invalid moves', () => {
     it('should handle SGF with invalid moves and keep currentMoveNumber consistent with moveHistory.length', () => {
       // This SGF has a move that plays on an occupied spot (dd is played twice)

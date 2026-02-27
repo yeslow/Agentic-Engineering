@@ -112,8 +112,9 @@ export function sgfToBoard(sgf: string): {
   // Remove whitespace outside of nodes
   const trimmed = sgf.trim();
 
-  // Extract root node - match (; followed by properties until first ; or )
-  const rootMatch = trimmed.match(/^\(\s*;([A-Z][^\s;]*)/);
+  // Extract root node - match (; followed by all properties until next node (;) or end of tree ()
+  // SGF format: (;FF[4]GM[1]SZ[19]PB[Black]PW[White]...)
+  const rootMatch = trimmed.match(/^\(\s*;([^\(]*?)(?=;|\))/);
   if (!rootMatch) {
     throw new Error('Invalid SGF format: missing root node');
   }
