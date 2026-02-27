@@ -339,6 +339,8 @@ export function drawStoneWithNumber(
 
 /**
  * Draw a trial stone with a move number label
+ * Trial stones use the same visual style as battle mode stones,
+ * only the move number label is different (smaller, in parentheses style)
  */
 export function drawTrialStoneWithNumber(
   ctx: CanvasRenderingContext2D,
@@ -348,34 +350,24 @@ export function drawTrialStoneWithNumber(
   color: StoneColor,
   moveNumber: number
 ): void {
-  // First draw the base trial stone (without number overlay)
-  // Draw semi-transparent stone base
-  ctx.globalAlpha = 0.6;
+  // Draw the same stone style as battle mode
+  drawStone(ctx, x, y, radius, color);
 
+  // Draw the move number with different style (smaller, with subtle background)
+  // Use a slightly muted color to distinguish from battle mode
+  ctx.fillStyle = color === 'black' ? 'rgba(200, 200, 200, 0.9)' : 'rgba(80, 80, 80, 0.9)';
+
+  // Draw a small circle background for the number
   ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = color === 'black' ? '#2B2B2B' : '#F0F0F0';
+  ctx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.globalAlpha = 1;
-
-  // Draw dashed border
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = color === 'black' ? '#666666' : '#999999';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([4, 4]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Draw the number with slightly transparent to match trial stone style
-  ctx.globalAlpha = 0.9;
+  // Draw the number
   ctx.fillStyle = color === 'black' ? '#FFFFFF' : '#000000';
-  ctx.font = `bold ${Math.floor(radius * 0.85)}px sans-serif`;
+  ctx.font = `bold ${Math.floor(radius * 0.7)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(String(moveNumber), x, y);
-  ctx.globalAlpha = 1;
 }
 
 /**
