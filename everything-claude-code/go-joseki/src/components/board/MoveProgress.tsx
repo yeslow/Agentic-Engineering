@@ -19,44 +19,19 @@ export function MoveProgress() {
     gameMode,
     exitTrialMode,
     getTotalMoves,
-    getCurrentTrialMoveIndex,
-    trialModeEntryMove,
-    trialMoveHistory,
     trialRedoStack,
     redoTrialMove,
   } = useBoardStore();
   const { setCurrentVariationId } = useKifuStore();
 
-  // Calculate total moves and current position based on game mode
+  // Calculate total moves and current position
   const totalMoves = getTotalMoves();
-  const currentMoveIndex = getCurrentTrialMoveIndex();
+  const currentMoveIndex = currentViewMove;
 
   // Get move at current position for display
   const currentMove = useMemo(() => {
-    if (gameMode === 'trial') {
-      // In trial mode, show board moves first, then trial moves
-      if (currentMoveIndex <= trialModeEntryMove) {
-        // Showing board moves
-        return currentMoveIndex > 0 ? board.moveHistory[currentMoveIndex - 1] : null;
-      } else {
-        // Showing trial moves
-        const trialMoveIndex = currentMoveIndex - trialModeEntryMove - 1;
-        if (trialMoveIndex >= 0 && trialMoveIndex < trialMoveHistory.length) {
-          const trialMove = trialMoveHistory[trialMoveIndex];
-          return {
-            moveNumber: currentMoveIndex,
-            color: trialMove.color,
-            coordinate: trialMove.coordinate,
-            comment: '',
-          };
-        }
-        return null;
-      }
-    } else {
-      // Battle mode
-      return currentViewMove > 0 ? board.moveHistory[currentViewMove - 1] : null;
-    }
-  }, [gameMode, currentMoveIndex, trialModeEntryMove, trialMoveHistory, board.moveHistory, currentViewMove]);
+    return currentViewMove > 0 ? board.moveHistory[currentViewMove - 1] : null;
+  }, [currentViewMove, board.moveHistory]);
 
   // Keyboard shortcuts: Left Arrow = previous, Right Arrow = next
   useEffect(() => {
@@ -74,6 +49,7 @@ export function MoveProgress() {
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         if (gameMode === 'trial') {
+          // In trial mode, right arrow redos trial moves
           redoTrialMove();
         } else {
           goToNext();
@@ -83,17 +59,13 @@ export function MoveProgress() {
         goToMove(0);
       } else if (e.key === 'End') {
         e.preventDefault();
-        if (gameMode === 'trial') {
-          goToMove(trialModeEntryMove + trialMoveHistory.length);
-        } else {
-          goToLastMove();
-        }
+        goToLastMove();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [totalMoves, gameMode, trialModeEntryMove, trialMoveHistory.length, goToMove, goToPrevious, goToNext, goToLastMove, redoTrialMove]);
+  }, [totalMoves, gameMode, goToMove, goToPrevious, goToNext, goToLastMove, redoTrialMove]);
 
   return (
     <Card>
@@ -127,19 +99,7 @@ export function MoveProgress() {
               max={totalMoves}
               step={1}
               onValueChange={(value) => {
-                const newValue = value[0];
-                if (gameMode === 'trial') {
-                  // In trial mode, navigate to board moves or trial moves accordingly
-                  if (newValue <= trialModeEntryMove) {
-                    // Navigate to board move - this will exit trial mode
-                    goToMove(newValue);
-                  } else {
-                    // Navigate within trial moves - keep only moves up to newValue
-                    goToMove(newValue);
-                  }
-                } else {
-                  goToMove(newValue);
-                }
+                goToMove(value[0]);
               }}
               disabled={totalMoves === 0}
               className="w-full"
@@ -208,13 +168,7 @@ export function MoveProgress() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => {
-                  if (gameMode === 'trial') {
-                    goToMove(trialModeEntryMove + trialMoveHistory.length);
-                  } else {
-                    goToLastMove();
-                  }
-                }}
+                onClick={goToLastMove}
                 disabled={currentMoveIndex >= totalMoves || totalMoves === 0}
                 title="跳到最新"
               >

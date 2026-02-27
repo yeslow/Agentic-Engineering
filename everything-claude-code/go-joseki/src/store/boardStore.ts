@@ -360,21 +360,23 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   },
 
   exitTrialMode: () => {
-    const { trialModeEntryMove, board } = get();
+    const { board } = get();
+    // Return to the last move on the board when exiting trial mode
+    const lastBoardMove = board.moveHistory.length;
     set({
       gameMode: 'battle',
       trialStones: { black: [], white: [] },
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
-      currentViewMove: trialModeEntryMove,
+      currentViewMove: lastBoardMove,
       trialModeEntryMove: 0,
       trialMoveHistory: [],
       trialRedoStack: [],
-      // Update board.currentMoveNumber to match currentViewMove
+      // Update board.currentMoveNumber to match the last board move
       board: {
         ...board,
-        currentMoveNumber: trialModeEntryMove,
+        currentMoveNumber: lastBoardMove,
       },
     });
   },
@@ -634,19 +636,15 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   },
 
   getTotalMoves: () => {
-    const { board, gameMode, trialModeEntryMove, trialMoveHistory } = get();
-    if (gameMode === 'trial') {
-      // In trial mode, total moves = entry move + trial moves
-      return trialModeEntryMove + trialMoveHistory.length;
-    }
+    const { board } = get();
+    // Always return the total moves on the board
     return board.moveHistory.length;
   },
 
   getCurrentTrialMoveIndex: () => {
-    const { gameMode, currentViewMove, trialModeEntryMove, trialMoveCount } = get();
-    if (gameMode === 'trial') {
-      return trialModeEntryMove + trialMoveCount;
-    }
+    const { currentViewMove } = get();
+    // Always return currentViewMove for progress bar display
+    // In trial mode, this shows the board position (trial stones are extra, not shown on progress bar)
     return currentViewMove;
   },
 }));

@@ -636,7 +636,7 @@ describe('Trial Mode Progress Bar', () => {
   });
 
   describe('exitTrialMode - restoring progress', () => {
-    it('should restore currentViewMove to entry move when exiting trial mode', () => {
+    it('should restore currentViewMove to last board move when exiting trial mode', () => {
       const store = useBoardStore.getState();
       store.initBoard(19);
       store.playMove([3, 3]);
@@ -654,8 +654,8 @@ describe('Trial Mode Progress Bar', () => {
       // Exit trial mode
       store.exitTrialMode();
 
-      // Should restore to entry move
-      expect(useBoardStore.getState().currentViewMove).toBe(1);
+      // Should restore to last board move
+      expect(useBoardStore.getState().currentViewMove).toBe(3);
     });
 
     it('should clear trial move history when exiting', () => {
@@ -681,7 +681,7 @@ describe('Trial Mode Progress Bar', () => {
       expect(store.getTotalMoves()).toBe(2);
     });
 
-    it('should return board + trial moves in trial mode', () => {
+    it('should return only board moves (trial stones not counted in progress bar)', () => {
       const store = useBoardStore.getState();
       store.initBoard(19);
       store.playMove([3, 3]);
@@ -689,7 +689,8 @@ describe('Trial Mode Progress Bar', () => {
       store.enterTrialMode();
       store.playTrialMove([3, 15]);
 
-      expect(store.getTotalMoves()).toBe(3);
+      // Progress bar shows only board moves, trial stones are extra
+      expect(store.getTotalMoves()).toBe(2);
     });
   });
 
@@ -704,7 +705,7 @@ describe('Trial Mode Progress Bar', () => {
       expect(store.getCurrentTrialMoveIndex()).toBe(1);
     });
 
-    it('should return entry move + trial moves in trial mode', () => {
+    it('should return currentViewMove in trial mode (trial stones not shown on progress bar)', () => {
       const store = useBoardStore.getState();
       store.initBoard(19);
       store.playMove([3, 3]);
@@ -712,17 +713,17 @@ describe('Trial Mode Progress Bar', () => {
       store.goToMove(1);
       store.enterTrialMode();
 
-      // At entry, should show entry move
+      // At entry, should show current board position
       expect(store.getCurrentTrialMoveIndex()).toBe(1);
 
-      // After trial move, should advance
+      // After trial move, progress bar still shows board position (trial stones are extra)
       store.playTrialMove([3, 15]);
-      expect(store.getCurrentTrialMoveIndex()).toBe(2);
+      expect(store.getCurrentTrialMoveIndex()).toBe(1);
     });
   });
 
-  describe('trial mode navigation - undo trial moves in reverse order', () => {
-    it('should undo trial moves in reverse order when using goToMove', () => {
+  describe('trial mode navigation - trial stones are extra (not on progress bar)', () => {
+    it('should keep progress bar at board position when playing trial moves', () => {
       const store = useBoardStore.getState();
       store.initBoard(19);
       store.playMove([3, 3]);
@@ -730,43 +731,41 @@ describe('Trial Mode Progress Bar', () => {
       store.enterTrialMode();
 
       // Play 3 trial moves
-      store.playTrialMove([3, 15]); // move 3
-      store.playTrialMove([15, 3]); // move 4
-      store.playTrialMove([4, 4]); // move 5
+      store.playTrialMove([3, 15]); // trial move 1
+      store.playTrialMove([15, 3]); // trial move 2
+      store.playTrialMove([4, 4]); // trial move 3
 
-      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(5);
+      // Progress bar shows board moves only (2), trial stones are extra
+      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(2);
       expect(useBoardStore.getState().trialMoveHistory.length).toBe(3);
 
-      // Navigate back to move 4 (should undo only the last trial move)
-      store.goToMove(4);
+      // Navigate to board move 1 (should clear trial moves after that position)
+      store.goToMove(1);
 
-      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(4);
-      expect(useBoardStore.getState().trialMoveHistory.length).toBe(2);
-      expect(useBoardStore.getState().trialStones.black).toContainEqual([3, 15]);
-      expect(useBoardStore.getState().trialStones.white).toContainEqual([15, 3]);
-      expect(useBoardStore.getState().trialStones.black).not.toContainEqual([4, 4]);
+      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(1);
+      expect(useBoardStore.getState().trialMoveHistory.length).toBe(0);
     });
 
-    it('should undo multiple trial moves when navigating back multiple steps', () => {
+    it('should clear trial moves when navigating to earlier board position', () => {
       const store = useBoardStore.getState();
       store.initBoard(19);
       store.playMove([3, 3]); // Black 1
       store.playMove([15, 15]); // White 2
       store.enterTrialMode();
 
-      // Play 3 trial moves (starting with Black 3)
-      store.playTrialMove([3, 15]); // Black 3
-      store.playTrialMove([15, 3]); // White 4
-      store.playTrialMove([4, 4]); // Black 5
+      // Play 3 trial moves
+      store.playTrialMove([3, 15]);
+      store.playTrialMove([15, 3]);
+      store.playTrialMove([4, 4]);
 
-      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(5);
+      // Progress bar shows board position (2)
+      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(2);
 
-      // Navigate back to move 3 (should undo 2 trial moves, keep only 1)
-      store.goToMove(3);
+      // Navigate to board move 1 - clears all trial moves
+      store.goToMove(1);
 
-      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(3);
-      expect(useBoardStore.getState().trialMoveHistory.length).toBe(1);
-      expect(useBoardStore.getState().trialStones.black).toContainEqual([3, 15]);
+      expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(1);
+      expect(useBoardStore.getState().trialMoveHistory.length).toBe(0);
     });
 
     it('should clear all trial moves when navigating to entry move', () => {
@@ -779,7 +778,7 @@ describe('Trial Mode Progress Bar', () => {
       store.playTrialMove([3, 15]);
       store.playTrialMove([15, 3]);
 
-      // Navigate back to entry move (move 2)
+      // Navigate to board move 2 (entry point)
       store.goToMove(2);
 
       expect(useBoardStore.getState().getCurrentTrialMoveIndex()).toBe(2);
@@ -873,7 +872,7 @@ describe('Trial Mode Progress Bar', () => {
       expect(useBoardStore.getState().trialModeEntryMove).toBe(2);
     });
 
-    it('should return correct total moves in trial mode when entering from middle of game', () => {
+    it('should return board move count in trial mode (trial stones not counted)', () => {
       const store = useBoardStore.getState();
       store.initBoard(19);
       store.playMove([3, 3]); // move 1
@@ -884,11 +883,11 @@ describe('Trial Mode Progress Bar', () => {
       store.goToMove(2);
       store.enterTrialMode();
 
-      // Total moves should be entry move (2) + 0 trial moves = 2
-      expect(useBoardStore.getState().getTotalMoves()).toBe(2);
+      // Total moves should be board moves only (3)
+      expect(useBoardStore.getState().getTotalMoves()).toBe(3);
     });
 
-    it('should return correct total moves in trial mode after playing trial moves', () => {
+    it('should return board move count after playing trial moves', () => {
       const store = useBoardStore.getState();
       store.initBoard(19);
       store.playMove([3, 3]); // move 1
@@ -902,8 +901,8 @@ describe('Trial Mode Progress Bar', () => {
       store.playTrialMove([3, 15]);
       store.playTrialMove([15, 3]);
 
-      // Total moves should be entry move (1) + 2 trial moves = 3
-      expect(useBoardStore.getState().getTotalMoves()).toBe(3);
+      // Total moves should be board moves only (2), trial stones are extra
+      expect(useBoardStore.getState().getTotalMoves()).toBe(2);
     });
   });
 });
