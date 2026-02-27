@@ -11,6 +11,7 @@ export function exportKifu(
   options?: {
     blackPlayer?: string;
     whitePlayer?: string;
+    winner?: string;
   }
 ): void {
   const sgf = boardToSgf(board, options);
@@ -33,6 +34,7 @@ export interface ImportKifuResult {
   board: BoardState;
   blackPlayer?: string;
   whitePlayer?: string;
+  winner?: string;
   kifuName?: string; // Name extracted from filename
 }
 

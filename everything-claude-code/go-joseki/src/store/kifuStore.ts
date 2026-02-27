@@ -13,6 +13,7 @@ export interface KifuRecord {
   description?: string;
   blackPlayer?: string; // Name of black player
   whitePlayer?: string; // Name of white player
+  winner?: string; // Winner information from SGF RE property (e.g., "黑胜白", "B+R")
 }
 
 export interface Variation extends VariationType {}

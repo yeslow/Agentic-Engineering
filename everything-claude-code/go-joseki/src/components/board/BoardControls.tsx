@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Undo2, Trash2, Download, Upload, Play, RotateCcw, Save, GitBranch, User } from 'lucide-react';
 import { exportKifu, importKifuWithPicker } from '../../lib/kifuManager';
 import { useState, useMemo } from 'react';
+import { Trophy } from 'lucide-react';
 
 export function BoardControls() {
   const {
@@ -74,6 +75,11 @@ export function BoardControls() {
     blackPlayer?: string;
     whitePlayer?: string;
   } | null>(null);
+  const [winnerEditDialog, setWinnerEditDialog] = useState<{
+    open: boolean;
+    winner: string;
+  } | null>(null);
+  const [currentWinner, setCurrentWinner] = useState<string | undefined>(undefined);
 
   const findExistingKifuByName = (name: string, excludeId?: string) => {
     return Object.values(kifuList || {}).find(
@@ -90,9 +96,11 @@ export function BoardControls() {
           blackPlayer: kifu.blackPlayer,
           whitePlayer: kifu.whitePlayer,
         });
+        setCurrentWinner(kifu.winner);
       }
     } else {
       setCurrentPlayers(null);
+      setCurrentWinner(undefined);
     }
   }, [currentKifuId, kifuList]);
 
@@ -162,6 +170,7 @@ export function BoardControls() {
       size: board.size,
       blackPlayer: currentPlayers?.blackPlayer,
       whitePlayer: currentPlayers?.whitePlayer,
+      winner: currentWinner,
     });
 
     setSaveMessage('保存成功！');
@@ -176,6 +185,7 @@ export function BoardControls() {
         moveCount: board.moveHistory.length,
         blackPlayer: currentPlayers?.blackPlayer,
         whitePlayer: currentPlayers?.whitePlayer,
+        winner: currentWinner,
       });
       setSaveMessage('已覆盖保存！');
       setTimeout(() => setSaveMessage(null), 3000);
@@ -188,6 +198,7 @@ export function BoardControls() {
     useKifuStore.getState().updateKifu(kifuId, {
       boardState: board,
       moveCount: board.moveHistory.length,
+      winner: currentWinner,
     });
     // Update current kifu ID
     setCurrentKifuId(kifuId);
@@ -210,6 +221,7 @@ export function BoardControls() {
         blackPlayer: result.blackPlayer,
         whitePlayer: result.whitePlayer,
       });
+      setCurrentWinner(result.winner);
 
       // Auto-save imported kifu to list using filename as kifu name
       const kifuName = result.kifuName || `导入棋谱_${result.board.size}路_${result.board.moveHistory.length}手`;
@@ -220,6 +232,7 @@ export function BoardControls() {
         size: result.board.size,
         blackPlayer: result.blackPlayer,
         whitePlayer: result.whitePlayer,
+        winner: result.winner,
       });
       setCurrentKifuId(newKifuId);
       setSaveMessage('导入并保存成功！');
@@ -297,6 +310,7 @@ export function BoardControls() {
     setCurrentKifuId(null); // Clear current kifu ID when resetting
     setCurrentVariationId(null); // Clear current variation ID when resetting
     setCurrentPlayers(null); // Clear current players when resetting
+    setCurrentWinner(undefined); // Clear winner when resetting
     resetBoard();
   };
 
@@ -328,6 +342,25 @@ export function BoardControls() {
     }
 
     setPlayerEditDialog(null);
+  };
+
+  const handleWinnerEditConfirm = (winner: string | null) => {
+    if (winner === null) {
+      setWinnerEditDialog(null);
+      return;
+    }
+
+    const trimmedWinner = winner.trim();
+    setCurrentWinner(trimmedWinner || undefined);
+
+    // If we have a current kifu, update it
+    if (currentKifuId) {
+      useKifuStore.getState().updateKifu(currentKifuId, {
+        winner: trimmedWinner || undefined,
+      });
+    }
+
+    setWinnerEditDialog(null);
   };
 
   return (
@@ -406,15 +439,37 @@ export function BoardControls() {
               {currentPlayers?.whitePlayer || '未设置'}
             </span>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePlayerEdit}
-            className="w-full"
-          >
-            <User className="h-4 w-4 mr-1" />
-            设置棋手名字
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePlayerEdit}
+              className="flex-1"
+            >
+              <User className="h-4 w-4 mr-1" />
+              设置棋手
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setWinnerEditDialog({
+                  open: true,
+                  winner: currentWinner || '',
+                });
+              }}
+              className="flex-1"
+            >
+              <Trophy className="h-4 w-4 mr-1" />
+              设置胜者
+            </Button>
+          </div>
+          {currentWinner && (
+            <div className="flex items-center gap-2 text-sm bg-primary/10 p-2 rounded">
+              <Trophy className="h-4 w-4 text-primary" />
+              <span className="font-medium text-primary">{currentWinner}</span>
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -629,6 +684,48 @@ export function BoardControls() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setPlayerEditDialog(null)}>取消</Button>
+              <Button type="submit">保存</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Winner Edit Dialog */}
+      <Dialog open={winnerEditDialog?.open ?? false} onOpenChange={(open) => !open && setWinnerEditDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>设置胜者</DialogTitle>
+            <DialogDescription>
+              输入比赛结果（例如：黑胜、白胜、黑中盘胜、白 +3.75 等）
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleWinnerEditConfirm(formData.get('winner') as string);
+          }}>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  比赛结果
+                </label>
+                <Input
+                  name="winner"
+                  defaultValue={winnerEditDialog?.winner}
+                  placeholder="例如：黑胜、白胜、黑中盘胜"
+                />
+              </div>
+              <div className="text-xs text-muted-foreground">
+                <p>常见格式：</p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>黑胜 / 白胜</li>
+                  <li>黑中盘胜 / 白中盘胜</li>
+                  <li>黑 +3.75 / 白 +2.5</li>
+                </ul>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setWinnerEditDialog(null)}>取消</Button>
               <Button type="submit">保存</Button>
             </DialogFooter>
           </form>

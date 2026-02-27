@@ -63,6 +63,7 @@ function unescapeSgfValue(value: string): string {
 export function boardToSgf(board: BoardState, options?: {
   blackPlayer?: string;
   whitePlayer?: string;
+  winner?: string;
 }): string {
   const moves = board.moveHistory;
   let gameInfo = `(;FF[4]GM[1]SZ[${board.size}]`;
@@ -73,6 +74,11 @@ export function boardToSgf(board: BoardState, options?: {
   }
   if (options?.whitePlayer) {
     gameInfo += `PW[${escapeSgfValue(options.whitePlayer)}]`;
+  }
+
+  // Add winner information if provided
+  if (options?.winner) {
+    gameInfo += `RE[${escapeSgfValue(options.winner)}]`;
   }
 
   gameInfo += `AP[GoJoseki]`;
@@ -109,6 +115,7 @@ export function sgfToBoard(sgf: string): {
   board: BoardState;
   blackPlayer?: string;
   whitePlayer?: string;
+  winner?: string;
 } {
   // Remove whitespace outside of nodes
   const trimmed = sgf.trim();
@@ -136,6 +143,7 @@ export function sgfToBoard(sgf: string): {
   // Get player names
   const blackPlayer = rootProps['PB'];
   const whitePlayer = rootProps['PW'];
+  const winner = rootProps['RE']; // Result property (e.g., "B+R" for Black wins by resignation)
 
   // Parse main line only - extract the main tree content before any variations
   // Variations are enclosed in parentheses (
@@ -199,6 +207,7 @@ export function sgfToBoard(sgf: string): {
     board,
     blackPlayer,
     whitePlayer,
+    winner,
   };
 }
 

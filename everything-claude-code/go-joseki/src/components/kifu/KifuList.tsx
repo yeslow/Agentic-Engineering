@@ -2,7 +2,7 @@ import { useKifuStore } from '../../store/kifuStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, Play, Calendar, Grid3x3 } from 'lucide-react';
+import { Trash2, Play, Calendar, Grid3x3, Trophy } from 'lucide-react';
 
 interface KifuListProps {
   onLoadKifu: (id: string) => void;
@@ -59,6 +59,33 @@ function KifuCard({ kifu, onLoad, onDelete }: KifuCardProps) {
     }
   };
 
+  // Get winner badge color
+  const getWinnerBadge = (winner?: string) => {
+    if (!winner) return null;
+
+    // Parse common winner formats: "黑胜白", "白胜", "B+R", "W+R", etc.
+    const isBlackWin = winner.includes('黑') || winner.startsWith('B');
+    const isWhiteWin = winner.includes('白') || winner.startsWith('W');
+
+    let displayText = winner;
+    let colorClass = 'bg-gray-500/10 border-gray-500/20 text-gray-500';
+
+    if (isBlackWin && !isWhiteWin) {
+      colorClass = 'bg-black/30 border-black/50 text-white';
+      displayText = '黑胜';
+    } else if (isWhiteWin && !isBlackWin) {
+      colorClass = 'bg-white/30 border-white/50 text-white';
+      displayText = '白胜';
+    }
+
+    return (
+      <Badge className={`text-xs ${colorClass}`}>
+        <Trophy className="h-3 w-3 mr-1" />
+        {displayText}
+      </Badge>
+    );
+  };
+
   return (
     <Card className="hover:border-primary/50 transition-colors">
       <CardHeader className="pb-2">
@@ -77,7 +104,8 @@ function KifuCard({ kifu, onLoad, onDelete }: KifuCardProps) {
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex flex-wrap gap-2 mb-3">
+          {kifu.winner && getWinnerBadge(kifu.winner)}
           <Badge variant="secondary" className="text-xs">
             {kifu.moveCount} 手
           </Badge>
