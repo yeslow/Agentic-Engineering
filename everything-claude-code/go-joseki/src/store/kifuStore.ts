@@ -18,6 +18,8 @@ export interface Variation extends VariationType {}
 interface KifuStore {
   kifuList: Record<string, KifuRecord>;
   variations: Record<string, Variation>;
+  currentKifuId: string | null; // Track the currently loaded kifu ID
+  currentVariationId: string | null; // Track the currently loaded variation ID
 
   // Kifu Actions
   addKifu: (kifu: Omit<KifuRecord, 'id' | 'createdAt' | 'updatedAt'>) => string;
@@ -25,6 +27,7 @@ interface KifuStore {
   updateKifu: (id: string, updates: Partial<KifuRecord>) => void;
   getKifu: (id: string) => KifuRecord | undefined;
   getAllKifu: () => KifuRecord[];
+  setCurrentKifuId: (id: string | null) => void; // Set current kifu ID
 
   // Variation Actions
   addVariation: (variation: Omit<Variation, 'id' | 'createdAt' | 'updatedAt'>) => string;
@@ -33,6 +36,7 @@ interface KifuStore {
   getVariation: (id: string) => Variation | undefined;
   getVariationsByParent: (parentId: string) => Variation[];
   getAllVariations: () => Variation[];
+  setCurrentVariationId: (id: string | null) => void; // Set current variation ID
 }
 
 const generateId = (): string => {
@@ -48,6 +52,8 @@ export const useKifuStore = create<KifuStore>()(
     (set, get) => ({
       kifuList: {},
       variations: {},
+      currentKifuId: null,
+      currentVariationId: null,
 
       addKifu: (kifu) => {
         const id = generateId();
@@ -62,6 +68,7 @@ export const useKifuStore = create<KifuStore>()(
               updatedAt: now,
             },
           },
+          currentKifuId: id, // Set newly added kifu as current
         }));
         return id;
       },
@@ -69,7 +76,11 @@ export const useKifuStore = create<KifuStore>()(
       removeKifu: (id) => {
         set((state) => {
           const { [id]: removed, ...rest } = state.kifuList;
-          return { kifuList: rest };
+          // Clear currentKifuId if the removed kifu is the current one
+          return {
+            kifuList: rest,
+            currentKifuId: state.currentKifuId === id ? null : state.currentKifuId,
+          };
         });
       },
 
@@ -97,6 +108,10 @@ export const useKifuStore = create<KifuStore>()(
         );
       },
 
+      setCurrentKifuId: (id) => {
+        set({ currentKifuId: id });
+      },
+
       addVariation: (variation) => {
         const id = generateVariationId();
         const now = new Date().toISOString();
@@ -117,7 +132,11 @@ export const useKifuStore = create<KifuStore>()(
       removeVariation: (id) => {
         set((state) => {
           const { [id]: removed, ...rest } = state.variations;
-          return { variations: rest };
+          // Clear currentVariationId if the removed variation is the current one
+          return {
+            variations: rest,
+            currentVariationId: state.currentVariationId === id ? null : state.currentVariationId,
+          };
         });
       },
 
@@ -150,6 +169,10 @@ export const useKifuStore = create<KifuStore>()(
         return Object.values(variations).sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
+      },
+
+      setCurrentVariationId: (id) => {
+        set({ currentVariationId: id });
       },
     }),
     {

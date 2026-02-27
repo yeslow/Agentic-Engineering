@@ -7,7 +7,7 @@ import { Grid3x3, Library } from 'lucide-react';
 
 export function KifuPage() {
   const navigate = useNavigate();
-  const { getAllKifu } = useKifuStore();
+  const { getAllKifu, setCurrentKifuId } = useKifuStore();
   const { loadBoard } = useBoardStore();
   const kifuList = getAllKifu();
 
@@ -15,6 +15,7 @@ export function KifuPage() {
     const kifu = useKifuStore.getState().getKifu(id);
     if (kifu) {
       loadBoard(kifu.boardState);
+      setCurrentKifuId(id);
       navigate('/');
     }
   };

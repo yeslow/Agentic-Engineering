@@ -4,6 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Undo2, Trash2, Download, Upload, Play, RotateCcw, Save, GitBranch } from 'lucide-react';
 import { exportKifu, importKifuWithPicker } from '../../lib/kifuManager';
 import { useState, useMemo } from 'react';
@@ -23,7 +42,7 @@ export function BoardControls() {
     trialStones,
     trialCapturedStones,
   } = useBoardStore();
-  const { addKifu, addVariation } = useKifuStore();
+  const { addKifu, addVariation, currentKifuId, setCurrentKifuId, currentVariationId, setCurrentVariationId } = useKifuStore();
   // Subscribe to kifuList reference only
   const kifuList = useKifuStore((state) => state.kifuList);
   // Memoize the latest kifu ID calculation
@@ -37,21 +56,81 @@ export function BoardControls() {
   const [importError, setImportError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [variationMessage, setVariationMessage] = useState<string | null>(null);
+  const [overwriteConfirm, setOverwriteConfirm] = useState<{
+    open: boolean;
+    kifuName: string;
+    existingId: string | null;
+  } | null>(null);
+  const [nameInputDialog, setNameInputDialog] = useState<{
+    open: boolean;
+    defaultName: string;
+  } | null>(null);
 
-  const handleSave = () => {
+  const findExistingKifuByName = (name: string, excludeId?: string) => {
+    return Object.values(kifuList || {}).find(
+      (kifu) => kifu.name === name && kifu.id !== excludeId
+    );
+  };
+
+  const handleSaveClick = () => {
     if (board.moveHistory.length === 0) {
       return;
     }
 
     const defaultName = `棋谱_${board.size}路_${board.moveHistory.length}手`;
-    const name = prompt('请输入棋谱名称：', defaultName);
 
-    if (name === null) {
-      return; // User cancelled
+    // If we have a current kifu ID, save directly with same name
+    if (currentKifuId) {
+      const currentKifu = useKifuStore.getState().getKifu(currentKifuId);
+      if (currentKifu) {
+        handleSaveDirectly(currentKifuId);
+        return;
+      }
     }
 
-    const kifuName = name.trim() || defaultName;
+    // No current kifu, show name input dialog
+    setNameInputDialog({
+      open: true,
+      defaultName,
+    });
+  };
 
+  const handleNameInputConfirm = (name: string | null) => {
+    if (!name) {
+      setNameInputDialog(null);
+      return;
+    }
+
+    const kifuName = name.trim();
+    if (!kifuName) {
+      setNameInputDialog(null);
+      return;
+    }
+
+    // Check if a kifu with the same name already exists
+    const existingKifu = findExistingKifuByName(kifuName);
+
+    if (existingKifu) {
+      // Show overwrite confirmation dialog
+      setOverwriteConfirm({
+        open: true,
+        kifuName,
+        existingId: existingKifu.id,
+      });
+    } else {
+      // No existing kifu, save directly
+      performSave(kifuName);
+      // Set the newly created kifu as current
+      const newKifuId = Object.entries(useKifuStore.getState().kifuList)
+        .find(([_, kifu]) => kifu.name === kifuName)?.[0];
+      if (newKifuId) {
+        setCurrentKifuId(newKifuId);
+      }
+    }
+    setNameInputDialog(null);
+  };
+
+  const performSave = (kifuName: string) => {
     addKifu({
       name: kifuName,
       boardState: board,
@@ -59,6 +138,31 @@ export function BoardControls() {
       size: board.size,
     });
 
+    setSaveMessage('保存成功！');
+    setTimeout(() => setSaveMessage(null), 3000);
+  };
+
+  const handleOverwriteConfirm = (confirm: boolean) => {
+    if (confirm && overwriteConfirm) {
+      // Update existing kifu
+      useKifuStore.getState().updateKifu(overwriteConfirm.existingId!, {
+        boardState: board,
+        moveCount: board.moveHistory.length,
+      });
+      setSaveMessage('已覆盖保存！');
+      setTimeout(() => setSaveMessage(null), 3000);
+    }
+    setOverwriteConfirm(null);
+  };
+
+  const handleSaveDirectly = (kifuId: string) => {
+    // Update existing kifu directly without confirmation
+    useKifuStore.getState().updateKifu(kifuId, {
+      boardState: board,
+      moveCount: board.moveHistory.length,
+    });
+    // Update current kifu ID
+    setCurrentKifuId(kifuId);
     setSaveMessage('保存成功！');
     setTimeout(() => setSaveMessage(null), 3000);
   };
@@ -72,6 +176,7 @@ export function BoardControls() {
       setImportError(null);
       const newBoard = await importKifuWithPicker();
       loadBoard(newBoard);
+      setCurrentKifuId(null); // Clear current kifu ID when importing
 
       // Auto-save imported kifu to list
       const defaultName = `导入棋谱_${newBoard.size}路_${newBoard.moveHistory.length}手`;
@@ -79,12 +184,14 @@ export function BoardControls() {
 
       if (name !== null) {
         const kifuName = name.trim() || defaultName;
-        addKifu({
+        const newKifuId = addKifu({
           name: kifuName,
           boardState: newBoard,
           moveCount: newBoard.moveHistory.length,
           size: newBoard.size,
         });
+        setCurrentKifuId(newKifuId);
+        setCurrentVariationId(null); // Clear current variation ID when importing
         setSaveMessage('导入并保存成功！');
         setTimeout(() => setSaveMessage(null), 3000);
       }
@@ -110,6 +217,24 @@ export function BoardControls() {
       return;
     }
 
+    // If we have a current variation ID, update it directly
+    if (currentVariationId) {
+      const currentVariation = useKifuStore.getState().getVariation(currentVariationId);
+      if (currentVariation) {
+        // Update existing variation with same name
+        useKifuStore.getState().updateVariation(currentVariationId, {
+          boardState: board,
+          trialStones,
+          trialCapturedStones,
+          trialMoveHistory: useBoardStore.getState().trialMoveHistory,
+          moveCount: trialMoveCount,
+        });
+        setVariationMessage('变化图保存成功！');
+        setTimeout(() => setVariationMessage(null), 3000);
+        return;
+      }
+    }
+
     const defaultName = `变化图_${board.size}路_${trialStones.black.length + trialStones.white.length}手`;
     const name = prompt('请输入变化图名称：', defaultName);
 
@@ -122,7 +247,7 @@ export function BoardControls() {
     // Get trialMoveHistory from board store
     const trialMoveHistory = useBoardStore.getState().trialMoveHistory;
 
-    addVariation({
+    const newVariationId = addVariation({
       name: variationName,
       parentId: latestKifuId,
       boardState: board,
@@ -132,8 +257,17 @@ export function BoardControls() {
       moveCount: trialMoveCount,
     });
 
+    // Set newly created variation as current
+    setCurrentVariationId(newVariationId);
+
     setVariationMessage('变化图保存成功！');
     setTimeout(() => setVariationMessage(null), 3000);
+  };
+
+  const handleResetBoard = () => {
+    setCurrentKifuId(null); // Clear current kifu ID when resetting
+    setCurrentVariationId(null); // Clear current variation ID when resetting
+    resetBoard();
   };
 
   return (
@@ -240,7 +374,10 @@ export function BoardControls() {
             <Button
               variant="default"
               size="sm"
-              onClick={exitTrialMode}
+              onClick={() => {
+                exitTrialMode();
+                setCurrentVariationId(null); // Clear current variation when exiting to battle mode
+              }}
               className="w-full"
             >
               <Play className="h-4 w-4 mr-1" />
@@ -261,7 +398,7 @@ export function BoardControls() {
           <Button
             variant="default"
             size="sm"
-            onClick={handleSave}
+            onClick={handleSaveClick}
             disabled={board.moveHistory.length === 0}
             className="flex-1"
           >
@@ -284,7 +421,7 @@ export function BoardControls() {
           <Button
             variant="destructive"
             size="sm"
-            onClick={resetBoard}
+            onClick={handleResetBoard}
             className="flex-1"
           >
             <Trash2 className="h-4 w-4 mr-1" />
@@ -311,6 +448,52 @@ export function BoardControls() {
           </Button>
         </div>
       </CardContent>
+
+      {/* Name Input Dialog */}
+      <Dialog open={nameInputDialog?.open ?? false} onOpenChange={(open) => !open && setNameInputDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>保存棋谱</DialogTitle>
+            <DialogDescription>
+              请输入棋谱名称
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleNameInputConfirm(formData.get('kifuName') as string);
+          }}>
+            <div className="grid gap-4 py-4">
+              <Input
+                name="kifuName"
+                defaultValue={nameInputDialog?.defaultName}
+                placeholder="请输入棋谱名称"
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setNameInputDialog(null)}>取消</Button>
+              <Button type="submit">保存</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Overwrite Confirmation Dialog */}
+      <AlertDialog open={overwriteConfirm?.open ?? false} onOpenChange={(open) => !open && setOverwriteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认覆盖</AlertDialogTitle>
+            <AlertDialogDescription>
+              棋谱名称「{overwriteConfirm?.kifuName}」已存在，是否要覆盖现有棋谱？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handleOverwriteConfirm(false)}>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleOverwriteConfirm(true)}>覆盖保存</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

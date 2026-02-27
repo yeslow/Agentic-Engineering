@@ -3,8 +3,13 @@ import { BoardControls } from '../components/board/BoardControls';
 import { MoveProgress } from '../components/board/MoveProgress';
 import { VariationList } from '../components/variation/VariationList';
 import { Card, CardContent } from '@/components/ui/card';
+import { useKifuStore } from '../store/kifuStore';
+import { useBoardStore } from '../store/boardStore';
 
 export function HomePage() {
+  const currentKifuId = useKifuStore((state) => state.currentKifuId);
+  const board = useBoardStore((state) => state.board);
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex flex-col lg:flex-row gap-6">
@@ -16,7 +21,10 @@ export function HomePage() {
             </CardContent>
           </Card>
           <MoveProgress />
-          <VariationList />
+          <VariationList
+            parentId={currentKifuId || undefined}
+            parentMoveNumber={board.currentMoveNumber}
+          />
         </div>
 
         {/* Controls Section */}

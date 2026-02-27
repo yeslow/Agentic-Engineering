@@ -9,11 +9,13 @@ import type { Variation } from '../../types/go';
 
 interface VariationListProps {
   parentId?: string;
+  parentMoveNumber?: number; // Optional: filter by parent move number
 }
 
-export function VariationList({ parentId }: VariationListProps) {
-  // Subscribe to stable reference
+export function VariationList({ parentId, parentMoveNumber }: VariationListProps) {
+  // Subscribe to stable references
   const variationsRef = useKifuStore((state) => state.variations);
+  const currentKifuId = useKifuStore((state) => state.currentKifuId);
   const removeVariation = useKifuStore((state) => state.removeVariation);
   const { loadVariation } = useBoardStore();
 
@@ -23,10 +25,18 @@ export function VariationList({ parentId }: VariationListProps) {
     const sorted = allVariations.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-    return parentId
-      ? sorted.filter((v) => v.parentId === parentId)
-      : sorted;
-  }, [variationsRef, parentId]);
+
+    // Filter by parent kifu ID
+    let filtered = sorted.filter((v) => v.parentId === parentId);
+
+    // If parentMoveNumber is provided, also filter by move number
+    // (variations created from a specific board state)
+    if (parentMoveNumber !== undefined) {
+      filtered = filtered.filter((v) => v.boardState.currentMoveNumber === parentMoveNumber);
+    }
+
+    return filtered;
+  }, [variationsRef, parentId, parentMoveNumber]);
 
   const handleLoadVariation = (variationId: string) => {
     const variation = useKifuStore.getState().getVariation(variationId);
@@ -38,8 +48,15 @@ export function VariationList({ parentId }: VariationListProps) {
         variation.trialCapturedStones,
         variation.trialMoveHistory
       );
+      // Set as current variation
+      useKifuStore.getState().setCurrentVariationId(variationId);
     }
   };
+
+  // Don't show variation list if no parent kifu is loaded
+  if (!parentId && !currentKifuId) {
+    return null;
+  }
 
   if (variations.length === 0) {
     return (

@@ -1,4 +1,5 @@
 import { useBoardStore } from '../../store/boardStore';
+import { useKifuStore } from '../../store/kifuStore';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ export function MoveProgress() {
     trialRedoStack,
     redoTrialMove,
   } = useBoardStore();
+  const { setCurrentVariationId } = useKifuStore();
 
   // Calculate total moves and current position based on game mode
   const totalMoves = getTotalMoves();
@@ -226,7 +228,10 @@ export function MoveProgress() {
             <Button
               variant="default"
               size="sm"
-              onClick={exitTrialMode}
+              onClick={() => {
+                exitTrialMode();
+                setCurrentVariationId(null); // Clear current variation when exiting to battle mode
+              }}
               className="w-full"
             >
               <Play className="h-4 w-4 mr-1" />
