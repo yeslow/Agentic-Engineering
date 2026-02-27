@@ -203,9 +203,13 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
       if (gameMode === 'trial') {
         playTrialMove(coord);
       } else {
-        // Battle mode: always enter trial mode when clicking the board
-        enterTrialMode();
-        playTrialMove(coord);
+        // Battle mode: only enter trial mode if there are stones on the board
+        // If board is empty (no kifu loaded), do nothing
+        const hasBoardStones = board.stones.black.length > 0 || board.stones.white.length > 0;
+        if (hasBoardStones) {
+          enterTrialMode();
+          playTrialMove(coord);
+        }
       }
     },
     [board.size, gameMode, enterTrialMode, playMove, playTrialMove, size]
