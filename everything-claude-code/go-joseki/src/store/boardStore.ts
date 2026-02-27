@@ -361,6 +361,24 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
 
   exitTrialMode: () => {
     const { trialModeEntryMove, board } = get();
+
+    // Rebuild board to the entry move position (similar to goToMove logic)
+    const newBoard = createInitialBoard(board.size);
+    let tempBoard = newBoard;
+    let successfulMoves = 0;
+    for (let i = 0; i < trialModeEntryMove; i++) {
+      const move = board.moveHistory[i];
+      try {
+        tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+        successfulMoves++;
+      } catch (e) {
+        console.warn('Skipping invalid move during exit trial mode:', move, e);
+      }
+    }
+
+    // Recalculate currentColor based on the entry move position
+    const newCurrentColor = successfulMoves % 2 === 0 ? 'black' : 'white';
+
     // Return to the entry move when exiting trial mode
     set({
       gameMode: 'battle',
@@ -368,14 +386,17 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
-      currentViewMove: trialModeEntryMove,
+      currentViewMove: successfulMoves,
       trialModeEntryMove: 0,
       trialMoveHistory: [],
       trialRedoStack: [],
-      // Update board.currentMoveNumber to match the entry move
+      currentColor: newCurrentColor,
+      isViewingMode: successfulMoves < board.moveHistory.length,
+      // Rebuild board to the entry move position
       board: {
-        ...board,
-        currentMoveNumber: trialModeEntryMove,
+        ...tempBoard,
+        moveHistory: board.moveHistory,
+        currentMoveNumber: successfulMoves,
       },
     });
   },
@@ -478,14 +499,14 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       board: newBoard,
       currentColor,
       hoverCoord: null,
-      currentViewMove: newBoard.moveHistory.length,
+      currentViewMove: newBoard.currentMoveNumber,
       isViewingMode: false,
       gameMode: 'trial',
       trialStones: variationTrialStones,
       trialMoveCount: variationTrialStones.black.length + variationTrialStones.white.length,
       trialCapturedStones: variationCapturedStones,
       trialKoPoint: null,
-      trialModeEntryMove: newBoard.moveHistory.length,
+      trialModeEntryMove: newBoard.currentMoveNumber,
       trialMoveHistory,
       trialRedoStack: [], // Initialize empty redo stack when loading variation
     });

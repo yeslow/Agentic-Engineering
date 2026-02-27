@@ -198,17 +198,23 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
 
       if (!coord) return;
 
-      // In battle mode, clicking the board enters trial mode
       // In trial mode, continue playing trial moves
       if (gameMode === 'trial') {
         playTrialMove(coord);
       } else {
-        // Battle mode: always enter trial mode when clicking the board
-        enterTrialMode();
-        playTrialMove(coord);
+        // Battle mode: check if we're at the latest position
+        const isAtLatestPosition = board.currentMoveNumber >= board.moveHistory.length;
+        if (isAtLatestPosition) {
+          // At latest position: play normally
+          playMove(coord);
+        } else {
+          // Viewing history: enter trial mode
+          enterTrialMode();
+          playTrialMove(coord);
+        }
       }
     },
-    [board.size, gameMode, enterTrialMode, playMove, playTrialMove, size]
+    [board.size, board.currentMoveNumber, board.moveHistory.length, gameMode, enterTrialMode, playMove, playTrialMove, size]
   );
 
   // Handle mouse move

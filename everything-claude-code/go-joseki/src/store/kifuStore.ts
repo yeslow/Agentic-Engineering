@@ -207,7 +207,7 @@ export const useKifuStore = create<KifuStore>()(
       partialize: (state) => ({
         kifuList: state.kifuList,
         variations: state.variations,
-        currentKifuId: state.currentKifuId, // Persist current kifu ID to avoid re-loading on refresh
+        // Note: currentKifuId is NOT persisted to avoid auto-loading on refresh
       }),
     }
   )
