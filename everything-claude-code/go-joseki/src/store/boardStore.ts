@@ -30,12 +30,14 @@ interface BoardStore {
   trialKoPoint: Coordinate | null;
   trialModeEntryMove: number;
   trialMoveHistory: TrialMove[];
+  trialRedoStack: TrialMove[]; // Stack for redo moves
 
   // Actions
   initBoard: (size?: 9 | 13 | 19) => void;
   playMove: (coord: Coordinate) => boolean;
   playTrialMove: (coord: Coordinate) => boolean;
   undoTrialMove: () => void;
+  redoTrialMove: () => void;
   clearTrialStones: () => void;
   setGameMode: (mode: GameMode) => void;
   enterTrialMode: () => void;
@@ -44,6 +46,12 @@ interface BoardStore {
   resetBoard: () => void;
   undo: () => void;
   loadBoard: (newBoard: BoardState) => void;
+  loadVariation: (
+    boardState: BoardState,
+    trialStones: TrialStones,
+    trialCapturedStones: TrialCaptures,
+    trialMoveHistory?: TrialMove[]
+  ) => void;
   canPlayAt: (coord: Coordinate) => boolean;
   goToMove: (index: number) => void;
   goToPrevious: () => void;
@@ -66,6 +74,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   trialKoPoint: null,
   trialModeEntryMove: 0,
   trialMoveHistory: [],
+  trialRedoStack: [],
 
   initBoard: (size = 19) => {
     set({
@@ -81,6 +90,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialKoPoint: null,
       trialModeEntryMove: 0,
       trialMoveHistory: [],
+      trialRedoStack: [],
     });
   },
 
@@ -229,30 +239,28 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         ...state.trialMoveHistory,
         { coordinate: coord, color: trialColor },
       ],
+      trialRedoStack: [], // Clear redo stack when playing a new move
     }));
     return true;
   },
 
   undoTrialMove: () => {
-    const { trialStones, trialMoveCount, trialCapturedStones, trialMoveHistory } = get();
+    const { trialStones, trialMoveCount, trialCapturedStones, trialMoveHistory, trialRedoStack } = get();
 
-    if (trialMoveCount === 0) {
+    if (trialMoveCount === 0 || trialMoveHistory.length === 0) {
       return;
     }
 
-    // Determine the color of the last move
-    const lastColor: StoneColor = (trialMoveCount - 1) % 2 === 0 ? 'black' : 'white';
-    const newTrialStones: TrialStones = {
-      black: [...trialStones.black],
-      white: [...trialStones.white],
-    };
+    // Get the last move from history
+    const lastMove = trialMoveHistory[trialMoveHistory.length - 1];
+    const lastCoord = lastMove.coordinate;
+    const lastColor = lastMove.color;
 
-    // Remove the last stone
-    if (lastColor === 'black' && newTrialStones.black.length > 0) {
-      newTrialStones.black.pop();
-    } else if (lastColor === 'white' && newTrialStones.white.length > 0) {
-      newTrialStones.white.pop();
-    }
+    // Remove the last stone from trialStones
+    const newTrialStones: TrialStones = {
+      black: trialStones.black.filter(([x, y]) => !(x === lastCoord[0] && y === lastCoord[1])),
+      white: trialStones.white.filter(([x, y]) => !(x === lastCoord[0] && y === lastCoord[1])),
+    };
 
     // Remove captures made by this color's last move
     const newTrialCapturedStones: TrialCaptures = {
@@ -263,8 +271,9 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     // Clear captures for the last move color
     newTrialCapturedStones[lastColor] = [];
 
-    // Remove last move from history
+    // Remove last move from history and add to redo stack
     const newTrialMoveHistory = trialMoveHistory.slice(0, -1);
+    const newTrialRedoStack = [...trialRedoStack, lastMove];
 
     set({
       trialStones: newTrialStones,
@@ -272,6 +281,42 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialCapturedStones: newTrialCapturedStones,
       trialKoPoint: null,
       trialMoveHistory: newTrialMoveHistory,
+      trialRedoStack: newTrialRedoStack,
+    });
+  },
+
+  redoTrialMove: () => {
+    const { trialStones, trialMoveCount, trialCapturedStones, trialMoveHistory, trialRedoStack } = get();
+
+    if (trialRedoStack.length === 0) {
+      return;
+    }
+
+    // Get the last redo move
+    const redoMove = trialRedoStack[trialRedoStack.length - 1];
+    const newTrialRedoStack = trialRedoStack.slice(0, -1);
+
+    // Add the move back to trialStones
+    const newTrialStones: TrialStones = {
+      black: [...trialStones.black],
+      white: [...trialStones.white],
+    };
+    if (redoMove.color === 'black') {
+      newTrialStones.black.push(redoMove.coordinate);
+    } else {
+      newTrialStones.white.push(redoMove.coordinate);
+    }
+
+    // Add move back to history
+    const newTrialMoveHistory = [...trialMoveHistory, redoMove];
+
+    set({
+      trialStones: newTrialStones,
+      trialMoveCount: trialMoveCount + 1,
+      trialCapturedStones: trialCapturedStones, // Simplified: restore captures if needed
+      trialKoPoint: null,
+      trialMoveHistory: newTrialMoveHistory,
+      trialRedoStack: newTrialRedoStack,
     });
   },
 
@@ -282,6 +327,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
       trialMoveHistory: [],
+      trialRedoStack: [],
     });
   },
 
@@ -295,6 +341,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialKoPoint: null,
       trialModeEntryMove: 0,
       trialMoveHistory: [],
+      trialRedoStack: [],
     });
   },
 
@@ -308,6 +355,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialKoPoint: null,
       trialModeEntryMove: currentViewMove,
       trialMoveHistory: [],
+      trialRedoStack: [],
     });
   },
 
@@ -322,6 +370,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       currentViewMove: trialModeEntryMove,
       trialModeEntryMove: 0,
       trialMoveHistory: [],
+      trialRedoStack: [],
     });
   },
 
@@ -374,6 +423,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialKoPoint: null,
       trialModeEntryMove: 0,
       trialMoveHistory: [],
+      trialRedoStack: [],
     });
   },
 
@@ -393,6 +443,35 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialKoPoint: null,
       trialModeEntryMove: 0,
       trialMoveHistory: [],
+    });
+  },
+
+  loadVariation: (
+    newBoard: BoardState,
+    variationTrialStones: TrialStones,
+    variationCapturedStones: TrialCaptures,
+    variationMoveHistory?: TrialMove[]
+  ) => {
+    // Determine current color based on board move count
+    const currentColor = newBoard.moveHistory.length % 2 === 0 ? 'black' : 'white';
+
+    // Use provided trial move history or rebuild from trialStones
+    const trialMoveHistory: TrialMove[] = variationMoveHistory || [];
+
+    set({
+      board: newBoard,
+      currentColor,
+      hoverCoord: null,
+      currentViewMove: newBoard.moveHistory.length,
+      isViewingMode: false,
+      gameMode: 'trial',
+      trialStones: variationTrialStones,
+      trialMoveCount: variationTrialStones.black.length + variationTrialStones.white.length,
+      trialCapturedStones: variationCapturedStones,
+      trialKoPoint: null,
+      trialModeEntryMove: newBoard.moveHistory.length,
+      trialMoveHistory,
+      trialRedoStack: [], // Initialize empty redo stack when loading variation
     });
   },
 
@@ -431,6 +510,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           trialKoPoint: null,
           trialModeEntryMove, // Preserve entry move
           trialMoveHistory: [],
+          trialRedoStack: [],
         });
       } else {
         // Navigate within trial moves - keep only moves up to targetIndex
@@ -454,6 +534,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           trialMoveHistory: newTrialMoveHistory,
           trialCapturedStones: { black: [], white: [] }, // Simplified: clear captures on navigation
           trialKoPoint: null,
+          trialRedoStack: [], // Clear redo stack when navigating
         });
       }
       return;
@@ -517,14 +598,19 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   },
 
   goToNext: () => {
-    const { currentViewMove, board, gameMode, trialModeEntryMove, trialMoveHistory } = get();
+    const { currentViewMove, board, gameMode, trialModeEntryMove, trialMoveHistory, trialRedoStack } = get();
     if (gameMode === 'trial') {
       const currentIndex = trialModeEntryMove + trialMoveHistory.length;
-      const totalMoves = board.moveHistory.length + trialMoveHistory.length;
-      if (currentIndex < totalMoves) {
-        // Can't go next in trial mode via button - user plays moves manually
-        // This is a limitation - navigation in trial mode is primarily via playing moves
+
+      // First, try to redo from trial redo stack
+      if (trialRedoStack.length > 0) {
+        get().redoTrialMove();
       }
+      // If no redo stack but we haven't reached the end of board moves, navigate board moves
+      else if (currentIndex < board.moveHistory.length) {
+        get().goToMove(currentIndex + 1);
+      }
+      // Otherwise, no more moves to go to
     } else {
       if (currentViewMove < board.moveHistory.length) {
         get().goToMove(currentViewMove + 1);

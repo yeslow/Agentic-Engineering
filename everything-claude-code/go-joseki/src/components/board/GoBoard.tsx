@@ -8,9 +8,9 @@ import {
   drawStone,
   drawLastMoveMarker,
   drawGhostStone,
-  drawTrialStone,
   drawKoMarker,
   drawCoordinates,
+  drawTrialStoneWithNumber,
 } from '../../lib/boardRenderer';
 import type { Coordinate } from '../../types/go';
 
@@ -33,6 +33,8 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     trialMoveCount,
     trialCapturedStones,
     enterTrialMode,
+    trialModeEntryMove,
+    trialMoveHistory,
   } = useBoardStore();
 
   // Determine the color for trial move (based on current board state + trial moves)
@@ -90,15 +92,18 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     const isWhiteCapturedInTrial = (coord: Coordinate) =>
       trialCapturedStones.black.some(([x, y]) => x === coord[0] && y === coord[1]);
 
+    // Draw board stones (without move numbers - only trial stones show numbers)
     // Draw black stones (filter out captured stones)
-    for (const coord of board.stones.black) {
+    for (let i = 0; i < board.stones.black.length; i++) {
+      const coord = board.stones.black[i];
       if (isBlackCapturedInTrial(coord)) continue;
       const { x, y } = coordinateToPixel(coord, dims);
       drawStone(ctx, x, y, dims.stoneRadius, 'black');
     }
 
     // Draw white stones (filter out captured stones)
-    for (const coord of board.stones.white) {
+    for (let i = 0; i < board.stones.white.length; i++) {
+      const coord = board.stones.white[i];
       if (isWhiteCapturedInTrial(coord)) continue;
       const { x, y } = coordinateToPixel(coord, dims);
       drawStone(ctx, x, y, dims.stoneRadius, 'white');
@@ -121,19 +126,33 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
       drawLastMoveMarker(ctx, x, y, lastMoveColor);
     }
 
-    // Draw trial stones (semi-transparent with dashed border)
-    // Filter out captured trial stones
-    for (const coord of trialStones.black) {
+    // Draw trial stones with move numbers (following trialMoveHistory order)
+    // Build a map from coordinate to move number
+    const trialStoneMoveMap = new Map<string, number>();
+    for (let i = 0; i < trialMoveHistory.length; i++) {
+      const move = trialMoveHistory[i];
+      const key = `${move.coordinate[0]},${move.coordinate[1]}`;
+      trialStoneMoveMap.set(key, i + 1); // Move numbers start from 1
+    }
+
+    // Filter out captured trial stones and draw with numbers
+    for (let i = 0; i < trialStones.black.length; i++) {
+      const coord = trialStones.black[i];
       // Skip if this trial stone was captured by white
       if (trialCapturedStones.white.some(([x, y]) => x === coord[0] && y === coord[1])) continue;
       const { x, y } = coordinateToPixel(coord, dims);
-      drawTrialStone(ctx, x, y, dims.stoneRadius, 'black');
+      const key = `${coord[0]},${coord[1]}`;
+      const moveNum = trialStoneMoveMap.get(key) || (i + 1);
+      drawTrialStoneWithNumber(ctx, x, y, dims.stoneRadius, 'black', moveNum);
     }
-    for (const coord of trialStones.white) {
+    for (let i = 0; i < trialStones.white.length; i++) {
+      const coord = trialStones.white[i];
       // Skip if this trial stone was captured by black
       if (trialCapturedStones.black.some(([x, y]) => x === coord[0] && y === coord[1])) continue;
       const { x, y } = coordinateToPixel(coord, dims);
-      drawTrialStone(ctx, x, y, dims.stoneRadius, 'white');
+      const key = `${coord[0]},${coord[1]}`;
+      const moveNum = trialStoneMoveMap.get(key) || (i + 1);
+      drawTrialStoneWithNumber(ctx, x, y, dims.stoneRadius, 'white', moveNum);
     }
 
     // Draw hover ghost stone (only if not occupied)
@@ -160,6 +179,8 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     trialCapturedStones,
     isOccupied,
     getTrialColor,
+    trialModeEntryMove,
+    trialMoveHistory,
   ]);
 
   // Handle click

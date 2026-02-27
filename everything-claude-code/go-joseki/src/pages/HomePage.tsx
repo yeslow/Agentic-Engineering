@@ -1,6 +1,7 @@
 import { GoBoard } from '../components/board/GoBoard';
 import { BoardControls } from '../components/board/BoardControls';
 import { MoveProgress } from '../components/board/MoveProgress';
+import { VariationList } from '../components/variation/VariationList';
 import { Card, CardContent } from '@/components/ui/card';
 
 export function HomePage() {
@@ -15,6 +16,7 @@ export function HomePage() {
             </CardContent>
           </Card>
           <MoveProgress />
+          <VariationList />
         </div>
 
         {/* Controls Section */}

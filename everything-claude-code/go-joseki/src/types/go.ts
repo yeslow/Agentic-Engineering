@@ -38,3 +38,23 @@ export interface Joseki {
   mainLine: Move[];
   explanation?: string;
 }
+
+export interface Variation {
+  id: string;
+  name: string;
+  parentId: string;
+  boardState: BoardState;
+  trialStones: {
+    black: Coordinate[];
+    white: Coordinate[];
+  };
+  trialCapturedStones: {
+    black: Coordinate[];
+    white: Coordinate[];
+  };
+  trialMoveHistory: Array<{ coordinate: Coordinate; color: StoneColor }>;
+  moveCount: number;
+  createdAt: string;
+  updatedAt: string;
+  description?: string;
+}

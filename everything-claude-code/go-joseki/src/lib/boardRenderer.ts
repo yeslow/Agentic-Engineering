@@ -316,6 +316,69 @@ export function drawTrialStone(
 }
 
 /**
+ * Draw a stone with a move number label
+ */
+export function drawStoneWithNumber(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  color: StoneColor,
+  moveNumber: number
+): void {
+  // First draw the base stone
+  drawStone(ctx, x, y, radius, color);
+
+  // Then draw the number
+  ctx.fillStyle = color === 'black' ? '#FFFFFF' : '#000000';
+  ctx.font = `bold ${Math.floor(radius * 0.9)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(moveNumber), x, y);
+}
+
+/**
+ * Draw a trial stone with a move number label
+ */
+export function drawTrialStoneWithNumber(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  color: StoneColor,
+  moveNumber: number
+): void {
+  // First draw the base trial stone (without number overlay)
+  // Draw semi-transparent stone base
+  ctx.globalAlpha = 0.6;
+
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = color === 'black' ? '#2B2B2B' : '#F0F0F0';
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+
+  // Draw dashed border
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = color === 'black' ? '#666666' : '#999999';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw the number with slightly transparent to match trial stone style
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = color === 'black' ? '#FFFFFF' : '#000000';
+  ctx.font = `bold ${Math.floor(radius * 0.85)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(moveNumber), x, y);
+  ctx.globalAlpha = 1;
+}
+
+/**
  * Draw ko point marker (a square mark indicating the ko point)
  */
 export function drawKoMarker(

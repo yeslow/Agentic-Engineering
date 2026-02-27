@@ -21,6 +21,8 @@ export function MoveProgress() {
     getCurrentTrialMoveIndex,
     trialModeEntryMove,
     trialMoveHistory,
+    trialRedoStack,
+    redoTrialMove,
   } = useBoardStore();
 
   // Calculate total moves and current position based on game mode
@@ -69,7 +71,11 @@ export function MoveProgress() {
         goToPrevious();
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        goToNext();
+        if (gameMode === 'trial') {
+          redoTrialMove();
+        } else {
+          goToNext();
+        }
       } else if (e.key === 'Home') {
         e.preventDefault();
         goToMove(0);
@@ -85,7 +91,7 @@ export function MoveProgress() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [totalMoves, gameMode, trialModeEntryMove, trialMoveHistory.length, goToMove, goToPrevious, goToNext, goToLastMove]);
+  }, [totalMoves, gameMode, trialModeEntryMove, trialMoveHistory.length, goToMove, goToPrevious, goToNext, goToLastMove, redoTrialMove]);
 
   return (
     <Card>
@@ -185,8 +191,14 @@ export function MoveProgress() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={goToNext}
-                disabled={currentMoveIndex >= totalMoves || totalMoves === 0}
+                onClick={() => {
+                  if (gameMode === 'trial') {
+                    redoTrialMove();
+                  } else {
+                    goToNext();
+                  }
+                }}
+                disabled={gameMode === 'trial' ? trialRedoStack.length === 0 : currentMoveIndex >= totalMoves || totalMoves === 0}
                 title="前进一手"
               >
                 <ChevronRight className="h-4 w-4" />

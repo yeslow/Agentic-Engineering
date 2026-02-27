@@ -4,9 +4,10 @@ import { JosekiPage } from './pages/JosekiPage';
 import { PracticePage } from './pages/PracticePage';
 import { QuizPage } from './pages/QuizPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { KifuPage } from './pages/KifuPage';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Circle } from 'lucide-react';
+import { Circle, Library } from 'lucide-react';
 
 function App() {
   return (
@@ -32,6 +33,14 @@ function App() {
                 {({ isActive }) => (
                   <Button variant={isActive ? "default" : "ghost"} size="sm">
                     定式库
+                  </Button>
+                )}
+              </NavLink>
+              <NavLink to="/kifu">
+                {({ isActive }) => (
+                  <Button variant={isActive ? "default" : "ghost"} size="sm">
+                    <Library className="h-4 w-4 mr-1" />
+                    棋谱
                   </Button>
                 )}
               </NavLink>
@@ -64,6 +73,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/joseki" element={<JosekiPage />} />
+          <Route path="/kifu" element={<KifuPage />} />
           <Route path="/practice" element={<PracticePage />} />
           <Route path="/quiz" element={<QuizPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
