@@ -202,19 +202,16 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
       if (gameMode === 'trial') {
         playTrialMove(coord);
       } else {
-        // Battle mode: check if we're at the latest position
-        const isAtLatestPosition = board.currentMoveNumber >= board.moveHistory.length;
-        if (isAtLatestPosition) {
-          // At latest position: play normally
-          playMove(coord);
-        } else {
-          // Viewing history: enter trial mode
+        // Battle mode: only enter trial mode if there are stones on the board
+        // If board is empty (no kifu loaded), do nothing
+        const hasBoardStones = board.stones.black.length > 0 || board.stones.white.length > 0;
+        if (hasBoardStones) {
           enterTrialMode();
           playTrialMove(coord);
         }
       }
     },
-    [board.size, board.currentMoveNumber, board.moveHistory.length, gameMode, enterTrialMode, playMove, playTrialMove, size]
+    [board.size, board.stones, gameMode, enterTrialMode, playTrialMove, size]
   );
 
   // Handle mouse move

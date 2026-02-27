@@ -11,11 +11,23 @@ import { cn } from '@/lib/utils';
 export function HomePage() {
   const currentKifuId = useKifuStore((state) => state.currentKifuId);
   const board = useBoardStore((state) => state.board);
+  const getKifu = useKifuStore((state) => state.getKifu);
+  const loadBoard = useBoardStore((state) => state.loadBoard);
 
   // Calculate optimal board size based on viewport - maximize board space
   const [boardSize, setBoardSize] = useState<number>(660);
   const [showLeftPanel, setShowLeftPanel] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
+
+  // Load kifu when page refreshes and currentKifuId exists but board is empty
+  useEffect(() => {
+    if (currentKifuId && board.moveHistory.length === 0) {
+      const kifu = getKifu(currentKifuId);
+      if (kifu) {
+        loadBoard(kifu.boardState);
+      }
+    }
+  }, [currentKifuId, board.moveHistory.length, getKifu, loadBoard]);
 
   useEffect(() => {
     const calculateBoardSize = () => {
