@@ -412,9 +412,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
 
     // Replay all moves except the last one
     let tempBoard = newBoard;
+    let successfulMoves = 0;
     for (const move of previousMoves) {
       try {
         tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+        successfulMoves++;
       } catch (e) {
         // Skip invalid moves during undo
         console.warn('Skipping invalid move during undo:', move, e);
@@ -422,10 +424,13 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     }
 
     set({
-      board: tempBoard,
+      board: {
+        ...tempBoard,
+        currentMoveNumber: successfulMoves,
+      },
       currentColor: toggleColor(currentColor),
       hoverCoord: null,
-      currentViewMove: previousMoves.length,
+      currentViewMove: successfulMoves,
       isViewingMode: false,
       gameMode: 'battle',
       trialStones: { black: [], white: [] },
@@ -496,28 +501,30 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         // Navigate to board move - but stay in trial mode
         const newBoard = createInitialBoard(board.size);
         let tempBoard = newBoard;
+        let successfulMoves = 0; // Track actual successful moves
         for (let i = 0; i < targetIndex; i++) {
           const move = board.moveHistory[i];
           try {
             tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+            successfulMoves++;
           } catch (e) {
             // Skip invalid moves during navigation
             console.warn('Skipping invalid move during navigation:', move, e);
           }
         }
 
-        const currentColor = targetIndex % 2 === 0 ? 'black' : 'white';
-        const isViewing = targetIndex < board.moveHistory.length;
+        const currentColor = successfulMoves % 2 === 0 ? 'black' : 'white';
+        const isViewing = successfulMoves < board.moveHistory.length;
 
         // Stay in trial mode, preserve trialModeEntryMove
         set({
           board: {
             ...tempBoard,
             moveHistory: board.moveHistory,
-            currentMoveNumber: targetIndex,
+            currentMoveNumber: successfulMoves,
           },
           currentColor,
-          currentViewMove: targetIndex,
+          currentViewMove: successfulMoves,
           isViewingMode: isViewing,
           gameMode: 'trial', // Stay in trial mode
           trialStones: { black: [], white: [] },
@@ -559,21 +566,23 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     // Battle mode - original behavior
     const newBoard = createInitialBoard(board.size);
     let tempBoard = newBoard;
+    let successfulMoves = 0; // Track actual successful moves
     for (let i = 0; i < targetIndex; i++) {
       const move = board.moveHistory[i];
       try {
         tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+        successfulMoves++;
       } catch (e) {
         // Skip invalid moves during navigation
         console.warn('Skipping invalid move during navigation:', move, e);
       }
     }
 
-    // Determine current color based on move count
-    const currentColor = targetIndex % 2 === 0 ? 'black' : 'white';
+    // Determine current color based on actual successful moves
+    const currentColor = successfulMoves % 2 === 0 ? 'black' : 'white';
 
     // Check if viewing historical position (not at the end of move history)
-    const isViewing = targetIndex < board.moveHistory.length;
+    const isViewing = successfulMoves < board.moveHistory.length;
 
     // Keep battle mode when navigating, GoBoard click handler will decide
     // whether to enter trial mode based on if there are more moves in history
@@ -581,10 +590,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       board: {
         ...tempBoard,
         moveHistory: board.moveHistory, // Preserve full history
-        currentMoveNumber: targetIndex,
+        currentMoveNumber: successfulMoves, // Use actual successful moves count
       },
       currentColor,
-      currentViewMove: targetIndex,
+      currentViewMove: successfulMoves, // Use actual successful moves count
       isViewingMode: isViewing,
       gameMode: 'battle', // Always stay in battle mode when navigating
       trialStones: { black: [], white: [] },

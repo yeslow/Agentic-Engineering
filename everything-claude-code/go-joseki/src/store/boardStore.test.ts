@@ -581,6 +581,29 @@ describe('BoardStore Navigation', () => {
       const currentMove = store.currentViewMove;
       expect(() => store.goToNext()).not.toThrow();
     });
+
+    it('should synchronize board currentMoveNumber with actual successfully played moves during navigation', () => {
+      // SGF with an invalid move (move 8 W[dd] is invalid - ko)
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp];B[pd];W[dc];B[de];W[ed];B[ee];W[dd])';
+      const { board: importedBoard } = sgfToBoard(sgf);
+
+      // The invalid move should be filtered, so we should have 7 valid moves
+      const validMoveCount = importedBoard.currentMoveNumber;
+
+      // Load the board
+      const store = useBoardStore.getState();
+      store.loadBoard(importedBoard);
+
+      // Navigate to the end
+      store.goToMove(validMoveCount);
+
+      // board.currentMoveNumber should match the number of successfully played moves
+      const board = useBoardStore.getState().board;
+      expect(board.currentMoveNumber).toBe(validMoveCount);
+
+      // Verify stone count matches currentMoveNumber
+      expect(board.stones.black.length + board.stones.white.length).toBe(validMoveCount);
+    });
   });
 });
 

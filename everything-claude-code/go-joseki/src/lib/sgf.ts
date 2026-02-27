@@ -167,19 +167,25 @@ export function sgfToBoard(sgf: string): {
 
   // Replay moves to build board state (stones, captures, etc.)
   // Use placeStone which will correctly track currentMoveNumber
+  const successfulMoves: Move[] = [];
   for (const move of moves) {
     try {
       board = placeStone(board, move.coordinate, move.color);
+      // Track successful moves with their comments
+      successfulMoves.push({
+        coordinate: move.coordinate,
+        color: move.color,
+        moveNumber: successfulMoves.length + 1,
+        comment: move.comment,
+      });
     } catch (e) {
       // Ignore invalid moves during replay
       console.warn('Skipping invalid move during SGF replay:', move, e);
     }
   }
 
-  // Preserve original move history with comments from SGF
-  // Keep only the moves that were successfully played
-  // Filter moves to include only those up to currentMoveNumber
-  board.moveHistory = moves.slice(0, board.currentMoveNumber);
+  // Use only successfully played moves
+  board.moveHistory = successfulMoves;
 
   return {
     board,
