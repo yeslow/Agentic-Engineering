@@ -177,8 +177,9 @@ export function sgfToBoard(sgf: string): {
   }
 
   // Preserve original move history with comments from SGF
-  // currentMoveNumber is already correct from placeStone calls
-  board.moveHistory = moves;
+  // Keep only the moves that were successfully played
+  // Filter moves to include only those up to currentMoveNumber
+  board.moveHistory = moves.slice(0, board.currentMoveNumber);
 
   return {
     board,

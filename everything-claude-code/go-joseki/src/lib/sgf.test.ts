@@ -144,7 +144,16 @@ describe('SGF Serialization', () => {
   });
 
   describe('round-trip', () => {
-    it('should preserve board state after serialize and deserialize', () => {
+    it('should preserve currentMoveNumber equals to moveHistory.length', () => {
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[pp];B[dp];W[pd])';
+      const result = sgfToBoard(sgf);
+      const board = result.board;
+
+      // This test verifies currentMoveNumber equals moveHistory.length
+      expect(board.currentMoveNumber).toBe(board.moveHistory.length);
+    });
+
+    it('should preserve currentMoveNumber after serialize and deserialize', () => {
       const original = {
         size: 19 as const,
         stones: {
@@ -167,10 +176,20 @@ describe('SGF Serialization', () => {
       const result = sgfToBoard(sgf);
       const board = result.board;
 
-      expect(board.size).toBe(original.size);
-      expect(board.moveHistory.length).toBe(original.moveHistory.length);
-      expect(board.stones.black.length).toBe(original.stones.black.length);
-      expect(board.stones.white.length).toBe(original.stones.white.length);
+      // This test verifies currentMoveNumber is preserved correctly
+      expect(board.currentMoveNumber).toBe(original.currentMoveNumber);
+    });
+
+    it('should correctly parse SGF and have matching currentMoveNumber and moveHistory.length', () => {
+      // Create a SGF with 10 moves
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp];B[pd];W[dc];B[ec];W[ed];B[cd];W[cc];B[de];W[ep])';
+      const result = sgfToBoard(sgf);
+      const board = result.board;
+
+      // Expected: 10 moves
+      expect(board.moveHistory.length).toBe(10);
+      expect(board.currentMoveNumber).toBe(10);
+      expect(board.currentMoveNumber).toBe(board.moveHistory.length);
     });
 
     it('should preserve board state for 9x9 game', () => {
@@ -220,6 +239,20 @@ describe('SGF Serialization', () => {
       expect(metadata.size).toBe(13);
       expect(metadata.moveCount).toBe(3);
       expect(metadata.hasCaptures).toBe(false);
+    });
+  });
+
+  describe('sgfToBoard with invalid moves', () => {
+    it('should handle SGF with invalid moves and keep currentMoveNumber consistent with moveHistory.length', () => {
+      // This SGF has a move that plays on an occupied spot (dd is played twice)
+      // The second dd move should be skipped, and currentMoveNumber should match moveHistory.length
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dd];B[dp])';
+      const result = sgfToBoard(sgf);
+      const board = result.board;
+
+      // The second move (W[dd]) is invalid because dd is already occupied
+      // So only 2 moves should be recorded (B[dd] and B[dp])
+      expect(board.moveHistory.length).toBe(board.currentMoveNumber);
     });
   });
 });

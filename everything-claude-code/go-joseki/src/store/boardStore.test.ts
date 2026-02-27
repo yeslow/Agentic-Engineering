@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useBoardStore } from './boardStore';
+import { sgfToBoard } from '../lib/sgf';
 
 describe('BoardStore Game Mode', () => {
   beforeEach(() => {
@@ -541,6 +542,24 @@ describe('BoardStore Navigation', () => {
 
       // Should start at the end
       expect(useBoardStore.getState().currentViewMove).toBe(loadedBoard.moveHistory.length);
+    });
+
+    it('should correctly set currentMoveNumber when loading board from SGF', () => {
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp];B[pd];W[dc];B[ec])';
+      const { board: importedBoard } = sgfToBoard(sgf);
+
+      // Verify the imported board has correct currentMoveNumber
+      expect(importedBoard.moveHistory.length).toBe(5);
+      expect(importedBoard.currentMoveNumber).toBe(5);
+
+      // Load the board
+      const store = useBoardStore.getState();
+      store.loadBoard(importedBoard);
+
+      // Verify the store has correct currentMoveNumber
+      const storeBoard = useBoardStore.getState().board;
+      expect(storeBoard.currentMoveNumber).toBe(5);
+      expect(storeBoard.currentMoveNumber).toBe(storeBoard.moveHistory.length);
     });
   });
 });
