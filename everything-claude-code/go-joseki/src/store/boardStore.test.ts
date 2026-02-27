@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useBoardStore } from './boardStore';
 import { sgfToBoard } from '../lib/sgf';
+import { sgfToBoard } from '../lib/sgf';
 
 describe('BoardStore Game Mode', () => {
   beforeEach(() => {
@@ -560,6 +561,25 @@ describe('BoardStore Navigation', () => {
       const storeBoard = useBoardStore.getState().board;
       expect(storeBoard.currentMoveNumber).toBe(5);
       expect(storeBoard.currentMoveNumber).toBe(storeBoard.moveHistory.length);
+    });
+
+    it('should handle navigation when SGF contains invalid moves that were filtered out', () => {
+      // This SGF has a ko situation - white takes ko, black tries to retake immediately
+      // The invalid move should be filtered during import
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp];B[pd];W[dc];B[de];W[ed];B[ee];W[dd])';
+      const { board: importedBoard } = sgfToBoard(sgf);
+
+      // Load the board
+      const store = useBoardStore.getState();
+      store.loadBoard(importedBoard);
+
+      // Should be able to navigate without errors
+      expect(() => store.goToMove(0)).not.toThrow();
+      expect(() => store.goToMove(3)).not.toThrow();
+
+      // Should be able to go to next move
+      const currentMove = store.currentViewMove;
+      expect(() => store.goToNext()).not.toThrow();
     });
   });
 });

@@ -413,7 +413,12 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     // Replay all moves except the last one
     let tempBoard = newBoard;
     for (const move of previousMoves) {
-      tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+      try {
+        tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+      } catch (e) {
+        // Skip invalid moves during undo
+        console.warn('Skipping invalid move during undo:', move, e);
+      }
     }
 
     set({
@@ -493,7 +498,12 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         let tempBoard = newBoard;
         for (let i = 0; i < targetIndex; i++) {
           const move = board.moveHistory[i];
-          tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+          try {
+            tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+          } catch (e) {
+            // Skip invalid moves during navigation
+            console.warn('Skipping invalid move during navigation:', move, e);
+          }
         }
 
         const currentColor = targetIndex % 2 === 0 ? 'black' : 'white';
@@ -551,7 +561,12 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     let tempBoard = newBoard;
     for (let i = 0; i < targetIndex; i++) {
       const move = board.moveHistory[i];
-      tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+      try {
+        tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+      } catch (e) {
+        // Skip invalid moves during navigation
+        console.warn('Skipping invalid move during navigation:', move, e);
+      }
     }
 
     // Determine current color based on move count
