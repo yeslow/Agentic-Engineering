@@ -360,7 +360,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   },
 
   exitTrialMode: () => {
-    const { trialModeEntryMove } = get();
+    const { trialModeEntryMove, board } = get();
     set({
       gameMode: 'battle',
       trialStones: { black: [], white: [] },
@@ -371,6 +371,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       trialModeEntryMove: 0,
       trialMoveHistory: [],
       trialRedoStack: [],
+      // Update board.currentMoveNumber to match currentViewMove
+      board: {
+        ...board,
+        currentMoveNumber: trialModeEntryMove,
+      },
     });
   },
 
