@@ -103,6 +103,7 @@ export function boardToSgf(board: BoardState, options?: {
 
 /**
  * Parse SGF string to BoardState
+ * Only parses the main line (first variation), ignores all other variations
  */
 export function sgfToBoard(sgf: string): {
   board: BoardState;
@@ -135,13 +136,18 @@ export function sgfToBoard(sgf: string): {
   const blackPlayer = rootProps['PB'];
   const whitePlayer = rootProps['PW'];
 
-  // Parse all nodes (moves) - each node starts with ; followed by properties
+  // Parse main line only - extract the main tree content before any variations
+  // Variations are enclosed in parentheses (
+  // We need to find the main line by traversing the tree structure
+  const mainLine = extractMainLine(trimmed);
+
+  // Parse all nodes (moves) in main line - each node starts with ; followed by properties
   // Match ;B[xx] or ;W[xx] with optional C[...] comment
   const nodeRegex = /;([BW])\[([a-y]{2})\](?:C\[([^\]]*)\])?/g;
   const moves: Move[] = [];
   let moveNumber = 0;
 
-  while ((match = nodeRegex.exec(trimmed)) !== null) {
+  while ((match = nodeRegex.exec(mainLine)) !== null) {
     const color = sgfToColor(match[1]);
     const coord = sgfToCoord(match[2]);
     const comment = match[3] ? unescapeSgfValue(match[3]) : undefined;
@@ -193,6 +199,39 @@ export function sgfToBoard(sgf: string): {
     blackPlayer,
     whitePlayer,
   };
+}
+
+/**
+ * Extract the main line from SGF content
+ * The main line is the first sequence of moves, ignoring all variations in parentheses
+ */
+function extractMainLine(sgf: string): string {
+  let result = '';
+  let depth = 0;
+  let inVariation = false;
+
+  for (let i = 0; i < sgf.length; i++) {
+    const char = sgf[i];
+
+    if (char === '(') {
+      depth++;
+      // If this is a variation (not the root), skip it
+      if (depth > 1 && !inVariation) {
+        inVariation = true;
+      }
+    } else if (char === ')') {
+      depth--;
+      // End of a variation
+      if (depth < 2) {
+        inVariation = false;
+      }
+    } else if (!inVariation) {
+      // Only add characters from the main line
+      result += char;
+    }
+  }
+
+  return result;
 }
 
 /**

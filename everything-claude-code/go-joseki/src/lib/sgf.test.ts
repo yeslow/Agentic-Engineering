@@ -281,6 +281,39 @@ describe('SGF Serialization', () => {
       expect(board.moveHistory.length).toBe(board.currentMoveNumber);
     });
   });
+
+  describe('sgfToBoard with variations', () => {
+    it('should only parse main line moves and ignore variations', () => {
+      // SGF with a variation - main line has 3 moves, variation has 2 moves
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp];B[pd](;W[dc];B[ec]))';
+      const result = sgfToBoard(sgf);
+      const board = result.board;
+
+      // Should only have 3 moves from main line, not 5
+      expect(board.moveHistory.length).toBe(3);
+      expect(board.currentMoveNumber).toBe(3);
+    });
+
+    it('should handle SGF with multiple variations', () => {
+      // SGF with multiple variations - main line has 2 moves
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp](;B[pd])(;B[dc]))';
+      const result = sgfToBoard(sgf);
+      const board = result.board;
+
+      // Should only have 2 moves from main line
+      expect(board.moveHistory.length).toBe(2);
+    });
+
+    it('should handle nested variations', () => {
+      // SGF with nested variations
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp];B[pd](;W[dc](;B[aa]);B[ec]))';
+      const result = sgfToBoard(sgf);
+      const board = result.board;
+
+      // Should only have 3 moves from main line
+      expect(board.moveHistory.length).toBe(3);
+    });
+  });
 });
 
 describe('SGF Coordinate Conversion', () => {
