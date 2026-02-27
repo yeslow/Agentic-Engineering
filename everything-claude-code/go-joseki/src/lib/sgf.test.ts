@@ -93,7 +93,8 @@ describe('SGF Serialization', () => {
   describe('sgfToBoard', () => {
     it('should parse empty board SGF', () => {
       const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki])';
-      const board = sgfToBoard(sgf);
+      const result = sgfToBoard(sgf);
+      const board = result.board;
 
       expect(board.size).toBe(19);
       expect(board.stones.black).toHaveLength(0);
@@ -103,7 +104,8 @@ describe('SGF Serialization', () => {
 
     it('should parse SGF with moves', () => {
       const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[pp];B[dp])';
-      const board = sgfToBoard(sgf);
+      const result = sgfToBoard(sgf);
+      const board = result.board;
 
       expect(board.size).toBe(19);
       expect(board.moveHistory).toHaveLength(3);
@@ -113,14 +115,16 @@ describe('SGF Serialization', () => {
 
     it('should parse 9x9 board SGF', () => {
       const sgf = '(;FF[4]GM[1]SZ[9]AP[GoJoseki];B[dd];W[ee])';
-      const board = sgfToBoard(sgf);
+      const result = sgfToBoard(sgf);
+      const board = result.board;
 
       expect(board.size).toBe(9);
     });
 
     it('should handle moves with comments', () => {
       const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd]C[Good move];W[pp])';
-      const board = sgfToBoard(sgf);
+      const result = sgfToBoard(sgf);
+      const board = result.board;
 
       expect(board.moveHistory).toHaveLength(2);
       expect(board.moveHistory[0].comment).toBe('Good move');
@@ -128,7 +132,8 @@ describe('SGF Serialization', () => {
 
     it('should reconstruct board state correctly', () => {
       const sgf = '(;FF[4]GM[1]SZ[19]AP[GoJoseki];B[dd];W[dp];B[pd];W[dc])';
-      const board = sgfToBoard(sgf);
+      const result = sgfToBoard(sgf);
+      const board = result.board;
 
       expect(board.currentMoveNumber).toBe(4);
       expect(board.stones.black).toHaveLength(2);
@@ -159,12 +164,13 @@ describe('SGF Serialization', () => {
       };
 
       const sgf = boardToSgf(original);
-      const restored = sgfToBoard(sgf);
+      const result = sgfToBoard(sgf);
+      const board = result.board;
 
-      expect(restored.size).toBe(original.size);
-      expect(restored.moveHistory.length).toBe(original.moveHistory.length);
-      expect(restored.stones.black.length).toBe(original.stones.black.length);
-      expect(restored.stones.white.length).toBe(original.stones.white.length);
+      expect(board.size).toBe(original.size);
+      expect(board.moveHistory.length).toBe(original.moveHistory.length);
+      expect(board.stones.black.length).toBe(original.stones.black.length);
+      expect(board.stones.white.length).toBe(original.stones.white.length);
     });
 
     it('should preserve board state for 9x9 game', () => {
@@ -186,10 +192,11 @@ describe('SGF Serialization', () => {
       };
 
       const sgf = boardToSgf(original);
-      const restored = sgfToBoard(sgf);
+      const result = sgfToBoard(sgf);
+      const board = result.board;
 
-      expect(restored.size).toBe(9);
-      expect(restored.moveHistory.length).toBe(3);
+      expect(board.size).toBe(9);
+      expect(board.moveHistory.length).toBe(3);
     });
   });
 
@@ -220,13 +227,15 @@ describe('SGF Serialization', () => {
 describe('SGF Coordinate Conversion', () => {
   it('should handle corner positions', () => {
     const sgf = '(;FF[4]GM[1]SZ[19];B[aa])';
-    const board = sgfToBoard(sgf);
+    const result = sgfToBoard(sgf);
+    const board = result.board;
     expect(board.stones.black[0]).toEqual([0, 0]);
   });
 
   it('should handle opposite corner', () => {
     const sgf = '(;FF[4]GM[1]SZ[19];B[ss])';
-    const board = sgfToBoard(sgf);
+    const result = sgfToBoard(sgf);
+    const board = result.board;
     expect(board.stones.black[0]).toEqual([18, 18]);
   });
 });

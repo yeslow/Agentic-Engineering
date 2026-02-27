@@ -56,13 +56,26 @@ function unescapeSgfValue(value: string): string {
  * Convert BoardState to SGF format string
  *
  * SGF Format Example:
- * (;FF[4]GM[1]SZ[19]AP[GoJoseki]
+ * (;FF[4]GM[1]SZ[19]PB[Black Player]PW[White Player]AP[GoJoseki]
  * ;B[dd];W[dp];B[pd];W[dc];B[ec];W[ed]
  * )
  */
-export function boardToSgf(board: BoardState): string {
+export function boardToSgf(board: BoardState, options?: {
+  blackPlayer?: string;
+  whitePlayer?: string;
+}): string {
   const moves = board.moveHistory;
-  const gameInfo = `(;FF[4]GM[1]SZ[${board.size}]AP[GoJoseki]`;
+  let gameInfo = `(;FF[4]GM[1]SZ[${board.size}]`;
+
+  // Add player names if provided
+  if (options?.blackPlayer) {
+    gameInfo += `PB[${escapeSgfValue(options.blackPlayer)}]`;
+  }
+  if (options?.whitePlayer) {
+    gameInfo += `PW[${escapeSgfValue(options.whitePlayer)}]`;
+  }
+
+  gameInfo += `AP[GoJoseki]`;
 
   // Add capture information as comments in the root node
   const blackCaptures = board.captures.black;
@@ -91,7 +104,11 @@ export function boardToSgf(board: BoardState): string {
 /**
  * Parse SGF string to BoardState
  */
-export function sgfToBoard(sgf: string): BoardState {
+export function sgfToBoard(sgf: string): {
+  board: BoardState;
+  blackPlayer?: string;
+  whitePlayer?: string;
+} {
   // Remove whitespace outside of nodes
   const trimmed = sgf.trim();
 
@@ -112,6 +129,10 @@ export function sgfToBoard(sgf: string): BoardState {
 
   // Get board size
   const size = parseInt(rootProps['SZ'] || '19', 10) as 9 | 13 | 19;
+
+  // Get player names
+  const blackPlayer = rootProps['PB'];
+  const whitePlayer = rootProps['PW'];
 
   // Parse all nodes (moves) - each node starts with ; followed by properties
   // Match ;B[xx] or ;W[xx] with optional C[...] comment
@@ -158,7 +179,11 @@ export function sgfToBoard(sgf: string): BoardState {
   board.moveHistory = moves;
   board.currentMoveNumber = moves.length;
 
-  return board;
+  return {
+    board,
+    blackPlayer,
+    whitePlayer,
+  };
 }
 
 /**
@@ -181,7 +206,8 @@ export function getSgfMetadata(sgf: string): {
   moveCount: number;
   hasCaptures: boolean;
 } {
-  const board = sgfToBoard(sgf);
+  const result = sgfToBoard(sgf);
+  const board = result.board;
   return {
     size: board.size,
     moveCount: board.moveHistory.length,

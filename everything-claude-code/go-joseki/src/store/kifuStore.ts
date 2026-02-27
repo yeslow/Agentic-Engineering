@@ -11,6 +11,8 @@ export interface KifuRecord {
   moveCount: number;
   size: 9 | 13 | 19;
   description?: string;
+  blackPlayer?: string; // Name of black player
+  whitePlayer?: string; // Name of white player
 }
 
 export interface Variation extends VariationType {}

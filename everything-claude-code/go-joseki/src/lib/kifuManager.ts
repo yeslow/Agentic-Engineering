@@ -7,9 +7,13 @@ import { boardToSgf, sgfToBoard } from './sgf';
  */
 export function exportKifu(
   board: BoardState,
-  filename?: string
+  filename?: string,
+  options?: {
+    blackPlayer?: string;
+    whitePlayer?: string;
+  }
 ): void {
-  const sgf = boardToSgf(board);
+  const sgf = boardToSgf(board, options);
   const blob = new Blob([sgf], { type: 'application/x-go-sgf' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -25,11 +29,17 @@ export function exportKifu(
   URL.revokeObjectURL(url);
 }
 
+export interface ImportKifuResult {
+  board: BoardState;
+  blackPlayer?: string;
+  whitePlayer?: string;
+}
+
 /**
  * Import game record from SGF file
- * Returns a Promise that resolves to the BoardState
+ * Returns a Promise that resolves to the ImportKifuResult
  */
-export function importKifu(file: File): Promise<BoardState> {
+export function importKifu(file: File): Promise<ImportKifuResult> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -40,8 +50,8 @@ export function importKifu(file: File): Promise<BoardState> {
           reject(new Error('Empty file'));
           return;
         }
-        const board = sgfToBoard(content);
-        resolve(board);
+        const result = sgfToBoard(content);
+        resolve(result);
       } catch (error) {
         reject(new Error(`Failed to parse SGF file: ${error instanceof Error ? error.message : 'Unknown error'}`));
       }
@@ -99,7 +109,7 @@ export function createFileInput(): Promise<File> {
  * Combined function to import kifu via file picker
  * Opens file dialog and returns the parsed BoardState
  */
-export async function importKifuWithPicker(): Promise<BoardState> {
+export async function importKifuWithPicker(): Promise<ImportKifuResult> {
   const file = await createFileInput();
   return importKifu(file);
 }

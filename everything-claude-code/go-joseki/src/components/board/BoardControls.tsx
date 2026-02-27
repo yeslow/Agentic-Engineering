@@ -23,7 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Undo2, Trash2, Download, Upload, Play, RotateCcw, Save, GitBranch } from 'lucide-react';
+import { Undo2, Trash2, Download, Upload, Play, RotateCcw, Save, GitBranch, User } from 'lucide-react';
 import { exportKifu, importKifuWithPicker } from '../../lib/kifuManager';
 import { useState, useMemo } from 'react';
 
@@ -42,7 +42,7 @@ export function BoardControls() {
     trialStones,
     trialCapturedStones,
   } = useBoardStore();
-  const { addKifu, addVariation, currentKifuId, setCurrentKifuId, currentVariationId, setCurrentVariationId } = useKifuStore();
+  const { addKifu, addVariation, currentKifuId, setCurrentKifuId, currentVariationId, setCurrentVariationId, getKifu } = useKifuStore();
   // Subscribe to kifuList reference only
   const kifuList = useKifuStore((state) => state.kifuList);
   // Memoize the latest kifu ID calculation
@@ -65,12 +65,36 @@ export function BoardControls() {
     open: boolean;
     defaultName: string;
   } | null>(null);
+  const [playerEditDialog, setPlayerEditDialog] = useState<{
+    open: boolean;
+    blackPlayer: string;
+    whitePlayer: string;
+  } | null>(null);
+  const [currentPlayers, setCurrentPlayers] = useState<{
+    blackPlayer?: string;
+    whitePlayer?: string;
+  } | null>(null);
 
   const findExistingKifuByName = (name: string, excludeId?: string) => {
     return Object.values(kifuList || {}).find(
       (kifu) => kifu.name === name && kifu.id !== excludeId
     );
   };
+
+  // Update current players when currentKifuId changes
+  useMemo(() => {
+    if (currentKifuId) {
+      const kifu = getKifu(currentKifuId);
+      if (kifu) {
+        setCurrentPlayers({
+          blackPlayer: kifu.blackPlayer,
+          whitePlayer: kifu.whitePlayer,
+        });
+      }
+    } else {
+      setCurrentPlayers(null);
+    }
+  }, [currentKifuId, kifuList]);
 
   const handleSaveClick = () => {
     if (board.moveHistory.length === 0) {
@@ -136,6 +160,8 @@ export function BoardControls() {
       boardState: board,
       moveCount: board.moveHistory.length,
       size: board.size,
+      blackPlayer: currentPlayers?.blackPlayer,
+      whitePlayer: currentPlayers?.whitePlayer,
     });
 
     setSaveMessage('保存成功！');
@@ -148,6 +174,8 @@ export function BoardControls() {
       useKifuStore.getState().updateKifu(overwriteConfirm.existingId!, {
         boardState: board,
         moveCount: board.moveHistory.length,
+        blackPlayer: currentPlayers?.blackPlayer,
+        whitePlayer: currentPlayers?.whitePlayer,
       });
       setSaveMessage('已覆盖保存！');
       setTimeout(() => setSaveMessage(null), 3000);
@@ -168,30 +196,36 @@ export function BoardControls() {
   };
 
   const handleExport = () => {
-    exportKifu(board);
+    exportKifu(board, undefined, currentPlayers || {});
   };
 
   const handleImport = async () => {
     try {
       setImportError(null);
-      const newBoard = await importKifuWithPicker();
-      loadBoard(newBoard);
+      const result = await importKifuWithPicker();
+      loadBoard(result.board);
       setCurrentKifuId(null); // Clear current kifu ID when importing
+      setCurrentVariationId(null); // Clear current variation ID when importing
+      setCurrentPlayers({
+        blackPlayer: result.blackPlayer,
+        whitePlayer: result.whitePlayer,
+      });
 
       // Auto-save imported kifu to list
-      const defaultName = `导入棋谱_${newBoard.size}路_${newBoard.moveHistory.length}手`;
+      const defaultName = `导入棋谱_${result.board.size}路_${result.board.moveHistory.length}手`;
       const name = prompt('请输入棋谱名称：', defaultName);
 
       if (name !== null) {
         const kifuName = name.trim() || defaultName;
         const newKifuId = addKifu({
           name: kifuName,
-          boardState: newBoard,
-          moveCount: newBoard.moveHistory.length,
-          size: newBoard.size,
+          boardState: result.board,
+          moveCount: result.board.moveHistory.length,
+          size: result.board.size,
+          blackPlayer: result.blackPlayer,
+          whitePlayer: result.whitePlayer,
         });
         setCurrentKifuId(newKifuId);
-        setCurrentVariationId(null); // Clear current variation ID when importing
         setSaveMessage('导入并保存成功！');
         setTimeout(() => setSaveMessage(null), 3000);
       }
@@ -267,7 +301,38 @@ export function BoardControls() {
   const handleResetBoard = () => {
     setCurrentKifuId(null); // Clear current kifu ID when resetting
     setCurrentVariationId(null); // Clear current variation ID when resetting
+    setCurrentPlayers(null); // Clear current players when resetting
     resetBoard();
+  };
+
+  const handlePlayerEdit = () => {
+    setPlayerEditDialog({
+      open: true,
+      blackPlayer: currentPlayers?.blackPlayer || '',
+      whitePlayer: currentPlayers?.whitePlayer || '',
+    });
+  };
+
+  const handlePlayerEditConfirm = (blackPlayer: string | null, whitePlayer: string | null) => {
+    if (blackPlayer === null || whitePlayer === null) {
+      setPlayerEditDialog(null);
+      return;
+    }
+
+    setCurrentPlayers({
+      blackPlayer: blackPlayer.trim() || undefined,
+      whitePlayer: whitePlayer.trim() || undefined,
+    });
+
+    // If we have a current kifu, update it
+    if (currentKifuId) {
+      useKifuStore.getState().updateKifu(currentKifuId, {
+        blackPlayer: blackPlayer.trim() || undefined,
+        whitePlayer: whitePlayer.trim() || undefined,
+      });
+    }
+
+    setPlayerEditDialog(null);
   };
 
   return (
@@ -325,6 +390,37 @@ export function BoardControls() {
             {saveMessage}
           </Badge>
         )}
+
+        {/* Player Information */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-stone-black" />
+              <span className="text-muted-foreground">黑棋</span>
+            </div>
+            <span className="font-medium">
+              {currentPlayers?.blackPlayer || '未设置'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-stone-white border" />
+              <span className="text-muted-foreground">白棋</span>
+            </div>
+            <span className="font-medium">
+              {currentPlayers?.whitePlayer || '未设置'}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePlayerEdit}
+            className="w-full"
+          >
+            <User className="h-4 w-4 mr-1" />
+            设置棋手名字
+          </Button>
+        </div>
 
         <Separator />
 
@@ -494,6 +590,55 @@ export function BoardControls() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Player Edit Dialog */}
+      <Dialog open={playerEditDialog?.open ?? false} onOpenChange={(open) => !open && setPlayerEditDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>设置棋手名字</DialogTitle>
+            <DialogDescription>
+              输入对局双方的名字（可选）
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handlePlayerEditConfirm(
+              formData.get('blackPlayer') as string,
+              formData.get('whitePlayer') as string
+            );
+          }}>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-stone-black" />
+                  黑棋
+                </label>
+                <Input
+                  name="blackPlayer"
+                  defaultValue={playerEditDialog?.blackPlayer}
+                  placeholder="黑棋棋手名字"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-stone-white border" />
+                  白棋
+                </label>
+                <Input
+                  name="whitePlayer"
+                  defaultValue={playerEditDialog?.whitePlayer}
+                  placeholder="白棋棋手名字"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setPlayerEditDialog(null)}>取消</Button>
+              <Button type="submit">保存</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
