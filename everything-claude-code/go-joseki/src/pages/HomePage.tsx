@@ -5,13 +5,12 @@ import { VariationList } from '../components/variation/VariationList';
 import { Card, CardContent } from '@/components/ui/card';
 import { useKifuStore } from '../store/kifuStore';
 import { useBoardStore } from '../store/boardStore';
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 export function HomePage() {
   const currentKifuId = useKifuStore((state) => state.currentKifuId);
   const board = useBoardStore((state) => state.board);
-  const { gameMode } = useBoardStore();
 
   // Calculate optimal board size based on viewport - maximize board space
   const [boardSize, setBoardSize] = useState<number>(660);

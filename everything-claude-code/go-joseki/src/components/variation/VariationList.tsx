@@ -4,8 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Trash2, Play, GitBranch } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Variation } from '../../types/go';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface VariationListProps {
   parentId?: string;
@@ -18,6 +28,26 @@ export function VariationList({ parentId, parentMoveNumber }: VariationListProps
   const currentKifuId = useKifuStore((state) => state.currentKifuId);
   const removeVariation = useKifuStore((state) => state.removeVariation);
   const { loadVariation } = useBoardStore();
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    open: boolean;
+    variationName: string;
+    variationId: string;
+  } | null>(null);
+
+  const handleDeleteClick = (variation: Variation) => {
+    setDeleteConfirm({
+      open: true,
+      variationName: variation.name,
+      variationId: variation.id,
+    });
+  };
+
+  const handleDeleteConfirm = (confirm: boolean) => {
+    if (confirm && deleteConfirm) {
+      removeVariation(deleteConfirm.variationId);
+    }
+    setDeleteConfirm(null);
+  };
 
   // Memoize processed variations
   const variations = useMemo(() => {
@@ -96,12 +126,42 @@ export function VariationList({ parentId, parentMoveNumber }: VariationListProps
               key={variation.id}
               variation={variation}
               onLoad={() => handleLoadVariation(variation.id)}
-              onDelete={() => removeVariation(variation.id)}
+              onDelete={() => handleDeleteClick(variation)}
             />
           ))}
         </div>
+        <DeleteConfirmDialog
+          open={deleteConfirm?.open ?? false}
+          variationName={deleteConfirm?.variationName ?? ''}
+          onConfirm={handleDeleteConfirm}
+        />
       </CardContent>
     </Card>
+  );
+}
+
+interface DeleteConfirmDialogProps {
+  open: boolean;
+  variationName: string;
+  onConfirm: (confirm: boolean) => void;
+}
+
+function DeleteConfirmDialog({ open, variationName, onConfirm }: DeleteConfirmDialogProps) {
+  return (
+    <AlertDialog open={open} onOpenChange={(isOpen) => !isOpen && onConfirm(false)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除</AlertDialogTitle>
+          <AlertDialogDescription>
+            确定要删除变化图「{variationName}」吗？此操作无法撤销。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => onConfirm(false)}>取消</AlertDialogCancel>
+          <AlertDialogAction onClick={() => onConfirm(true)}>删除</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

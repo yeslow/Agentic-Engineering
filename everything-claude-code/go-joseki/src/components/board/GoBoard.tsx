@@ -39,7 +39,7 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
 
   // Determine the color for trial move (based on current board state + trial moves)
   const getTrialColor = useCallback(() => {
-    // Use board.currentMoveNumber to handle viewing mode correctly
+    // Use currentMoveNumber to get the actual number of moves on the current board
     const boardMoveCount = board.currentMoveNumber;
     const totalMoveCount = boardMoveCount + trialMoveCount;
     return totalMoveCount % 2 === 0 ? 'black' : 'white';
@@ -198,21 +198,17 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
 
       if (!coord) return;
 
-      // Check if there are more moves in the history (viewing mode)
-      const hasNextMoveInHistory = board.currentMoveNumber < board.moveHistory.length;
-
-      if (hasNextMoveInHistory) {
-        // There are remaining moves in the kifu, enter trial mode
-        if (gameMode !== 'trial') {
-          enterTrialMode();
-        }
+      // In battle mode, clicking the board enters trial mode
+      // In trial mode, continue playing trial moves
+      if (gameMode === 'trial') {
         playTrialMove(coord);
       } else {
-        // No more moves in history, play normal battle mode move
-        playMove(coord);
+        // Battle mode: always enter trial mode when clicking the board
+        enterTrialMode();
+        playTrialMove(coord);
       }
     },
-    [board.size, board.currentMoveNumber, board.moveHistory.length, gameMode, enterTrialMode, playMove, playTrialMove, size]
+    [board.size, gameMode, enterTrialMode, playMove, playTrialMove, size]
   );
 
   // Handle mouse move

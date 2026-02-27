@@ -3,6 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Trash2, Play, Calendar, Grid3x3, Trophy } from 'lucide-react';
+import { useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface KifuListProps {
   onLoadKifu: (id: string) => void;
@@ -11,6 +22,26 @@ interface KifuListProps {
 export function KifuList({ onLoadKifu }: KifuListProps) {
   const { getAllKifu, removeKifu } = useKifuStore();
   const kifuList = getAllKifu();
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    open: boolean;
+    kifuName: string;
+    kifuId: string;
+  } | null>(null);
+
+  const handleDeleteClick = (kifu: import('../../store/kifuStore').KifuRecord) => {
+    setDeleteConfirm({
+      open: true,
+      kifuName: kifu.name,
+      kifuId: kifu.id,
+    });
+  };
+
+  const handleDeleteConfirm = (confirm: boolean) => {
+    if (confirm && deleteConfirm) {
+      removeKifu(deleteConfirm.kifuId);
+    }
+    setDeleteConfirm(null);
+  };
 
   if (kifuList.length === 0) {
     return (
@@ -30,9 +61,14 @@ export function KifuList({ onLoadKifu }: KifuListProps) {
           key={kifu.id}
           kifu={kifu}
           onLoad={() => onLoadKifu(kifu.id)}
-          onDelete={() => removeKifu(kifu.id)}
+          onDelete={() => handleDeleteClick(kifu)}
         />
       ))}
+      <DeleteConfirmDialog
+        open={deleteConfirm?.open ?? false}
+        kifuName={deleteConfirm?.kifuName ?? ''}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }
@@ -137,5 +173,30 @@ function KifuCard({ kifu, onLoad, onDelete }: KifuCardProps) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+interface DeleteConfirmDialogProps {
+  open: boolean;
+  kifuName: string;
+  onConfirm: (confirm: boolean) => void;
+}
+
+function DeleteConfirmDialog({ open, kifuName, onConfirm }: DeleteConfirmDialogProps) {
+  return (
+    <AlertDialog open={open} onOpenChange={(isOpen) => !isOpen && onConfirm(false)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除</AlertDialogTitle>
+          <AlertDialogDescription>
+            确定要删除棋谱「{kifuName}」吗？此操作无法撤销。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => onConfirm(false)}>取消</AlertDialogCancel>
+          <AlertDialogAction onClick={() => onConfirm(true)}>删除</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

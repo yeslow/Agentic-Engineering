@@ -149,7 +149,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     }
 
     // Determine color based on board state + trial moves
-    // Use currentMoveNumber to handle viewing mode correctly
+    // Use currentMoveNumber to get the actual number of moves on the current board
     const boardMoveCount = board.currentMoveNumber;
     const trialColor: StoneColor = (boardMoveCount + trialMoveCount) % 2 === 0 ? 'black' : 'white';
 

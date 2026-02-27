@@ -46,14 +46,6 @@ export function BoardControls() {
   const { addKifu, addVariation, currentKifuId, setCurrentKifuId, currentVariationId, setCurrentVariationId, getKifu } = useKifuStore();
   // Subscribe to kifuList reference only
   const kifuList = useKifuStore((state) => state.kifuList);
-  // Memoize the latest kifu ID calculation
-  const latestKifuId = useMemo(() => {
-    if (!kifuList || Object.keys(kifuList).length === 0) return null;
-    const sorted = Object.values(kifuList).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    return sorted[0]?.id || null;
-  }, [kifuList]);
   const [importError, setImportError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [variationMessage, setVariationMessage] = useState<string | null>(null);
@@ -80,6 +72,9 @@ export function BoardControls() {
     winner: string;
   } | null>(null);
   const [currentWinner, setCurrentWinner] = useState<string | undefined>(undefined);
+  const [resetConfirm, setResetConfirm] = useState<{
+    open: boolean;
+  } | null>(null);
 
   const findExistingKifuByName = (name: string, excludeId?: string) => {
     return Object.values(kifuList || {}).find(
@@ -247,7 +242,7 @@ export function BoardControls() {
   const hasTrialStones = trialMoveCount > 0;
 
   const handleSaveVariation = () => {
-    if (!latestKifuId) {
+    if (!currentKifuId) {
       setVariationMessage('请先保存主棋谱');
       setTimeout(() => setVariationMessage(null), 3000);
       return;
@@ -291,7 +286,7 @@ export function BoardControls() {
 
     const newVariationId = addVariation({
       name: variationName,
-      parentId: latestKifuId,
+      parentId: currentKifuId,
       boardState: board,
       trialStones,
       trialCapturedStones,
@@ -307,11 +302,18 @@ export function BoardControls() {
   };
 
   const handleResetBoard = () => {
-    setCurrentKifuId(null); // Clear current kifu ID when resetting
-    setCurrentVariationId(null); // Clear current variation ID when resetting
-    setCurrentPlayers(null); // Clear current players when resetting
-    setCurrentWinner(undefined); // Clear winner when resetting
-    resetBoard();
+    setResetConfirm({ open: true });
+  };
+
+  const handleResetConfirm = (confirm: boolean) => {
+    if (confirm) {
+      setCurrentKifuId(null);
+      setCurrentVariationId(null);
+      setCurrentPlayers(null);
+      setCurrentWinner(undefined);
+      resetBoard();
+    }
+    setResetConfirm(null);
   };
 
   const handlePlayerEdit = () => {
@@ -752,6 +754,22 @@ export function BoardControls() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Reset Board Confirmation Dialog */}
+      <AlertDialog open={resetConfirm?.open ?? false} onOpenChange={(open) => !open && setResetConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认清空</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要清空棋盘吗？此操作将清除所有棋子和当前对局数据。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handleResetConfirm(false)}>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleResetConfirm(true)}>清空</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
