@@ -33,6 +33,23 @@ export interface ImportKifuResult {
   board: BoardState;
   blackPlayer?: string;
   whitePlayer?: string;
+  kifuName?: string; // Name extracted from filename
+}
+
+/**
+ * Extract kifu name from filename by removing extension
+ * Returns default name if filename is empty or only extension
+ */
+export function extractKifuNameFromFilename(filename: string): string {
+  if (!filename) {
+    return '导入棋谱';
+  }
+
+  // Remove .sgf or .txt extension (case insensitive)
+  const name = filename.replace(/\.(sgf|txt)$/i, '');
+
+  // Return default name if result is empty
+  return name || '导入棋谱';
 }
 
 /**
@@ -51,7 +68,10 @@ export function importKifu(file: File): Promise<ImportKifuResult> {
           return;
         }
         const result = sgfToBoard(content);
-        resolve(result);
+        resolve({
+          ...result,
+          kifuName: extractKifuNameFromFilename(file.name),
+        });
       } catch (error) {
         reject(new Error(`Failed to parse SGF file: ${error instanceof Error ? error.message : 'Unknown error'}`));
       }

@@ -211,24 +211,19 @@ export function BoardControls() {
         whitePlayer: result.whitePlayer,
       });
 
-      // Auto-save imported kifu to list
-      const defaultName = `导入棋谱_${result.board.size}路_${result.board.moveHistory.length}手`;
-      const name = prompt('请输入棋谱名称：', defaultName);
-
-      if (name !== null) {
-        const kifuName = name.trim() || defaultName;
-        const newKifuId = addKifu({
-          name: kifuName,
-          boardState: result.board,
-          moveCount: result.board.moveHistory.length,
-          size: result.board.size,
-          blackPlayer: result.blackPlayer,
-          whitePlayer: result.whitePlayer,
-        });
-        setCurrentKifuId(newKifuId);
-        setSaveMessage('导入并保存成功！');
-        setTimeout(() => setSaveMessage(null), 3000);
-      }
+      // Auto-save imported kifu to list using filename as kifu name
+      const kifuName = result.kifuName || `导入棋谱_${result.board.size}路_${result.board.moveHistory.length}手`;
+      const newKifuId = addKifu({
+        name: kifuName,
+        boardState: result.board,
+        moveCount: result.board.moveHistory.length,
+        size: result.board.size,
+        blackPlayer: result.blackPlayer,
+        whitePlayer: result.whitePlayer,
+      });
+      setCurrentKifuId(newKifuId);
+      setSaveMessage('导入并保存成功！');
+      setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
       const message = error instanceof Error ? error.message : '导入失败';
       setImportError(message);
