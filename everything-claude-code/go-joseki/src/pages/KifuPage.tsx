@@ -1,15 +1,30 @@
+import { useEffect, useState } from 'react';
 import { KifuList } from '../components/kifu/KifuList';
 import { useKifuStore } from '../store/kifuStore';
 import { useBoardStore } from '../store/boardStore';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Grid3x3, Library } from 'lucide-react';
+import { loadDefaultKifu } from '../data/kifu';
 
 export function KifuPage() {
   const navigate = useNavigate();
-  const { getAllKifu, setCurrentKifuId } = useKifuStore();
+  const { getAllKifu, setCurrentKifuId, addKifu } = useKifuStore();
   const { loadBoard } = useBoardStore();
   const kifuList = getAllKifu();
+  const [defaultKifuLoaded, setDefaultKifuLoaded] = useState(false);
+
+  // Load default kifu on first visit
+  useEffect(() => {
+    if (kifuList.length === 0 && !defaultKifuLoaded) {
+      setDefaultKifuLoaded(true);
+      loadDefaultKifu().then((defaultKifu) => {
+        if (defaultKifu) {
+          addKifu(defaultKifu);
+        }
+      });
+    }
+  }, [kifuList.length, defaultKifuLoaded, addKifu]);
 
   const handleLoadKifu = (id: string) => {
     const kifu = useKifuStore.getState().getKifu(id);

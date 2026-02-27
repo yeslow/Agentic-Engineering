@@ -28,17 +28,6 @@ export interface BoardState {
   currentMoveNumber: number;
 }
 
-export interface Joseki {
-  id: string;
-  name: string;
-  category: 'corner' | 'side' | 'center';
-  type: 'approach' | 'enclosure' | 'pincer' | 'invasion' | 'other';
-  difficulty: 1 | 2 | 3 | 4 | 5;
-  boardSize: 9 | 13 | 19;
-  mainLine: Move[];
-  explanation?: string;
-}
-
 export interface Variation {
   id: string;
   name: string;

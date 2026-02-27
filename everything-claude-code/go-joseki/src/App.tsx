@@ -1,9 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
-import { JosekiPage } from './pages/JosekiPage';
-import { PracticePage } from './pages/PracticePage';
-import { QuizPage } from './pages/QuizPage';
-import { DashboardPage } from './pages/DashboardPage';
 import { KifuPage } from './pages/KifuPage';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -29,39 +25,11 @@ function App() {
                   </Button>
                 )}
               </NavLink>
-              <NavLink to="/joseki">
-                {({ isActive }) => (
-                  <Button variant={isActive ? "default" : "ghost"} size="sm">
-                    定式库
-                  </Button>
-                )}
-              </NavLink>
               <NavLink to="/kifu">
                 {({ isActive }) => (
                   <Button variant={isActive ? "default" : "ghost"} size="sm">
                     <Library className="h-4 w-4 mr-1" />
                     棋谱
-                  </Button>
-                )}
-              </NavLink>
-              <NavLink to="/practice">
-                {({ isActive }) => (
-                  <Button variant={isActive ? "default" : "ghost"} size="sm">
-                    练习
-                  </Button>
-                )}
-              </NavLink>
-              <NavLink to="/quiz">
-                {({ isActive }) => (
-                  <Button variant={isActive ? "default" : "ghost"} size="sm">
-                    测验
-                  </Button>
-                )}
-              </NavLink>
-              <NavLink to="/dashboard">
-                {({ isActive }) => (
-                  <Button variant={isActive ? "default" : "ghost"} size="sm">
-                    进度
                   </Button>
                 )}
               </NavLink>
@@ -72,11 +40,7 @@ function App() {
         {/* Routes */}
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/joseki" element={<JosekiPage />} />
           <Route path="/kifu" element={<KifuPage />} />
-          <Route path="/practice" element={<PracticePage />} />
-          <Route path="/quiz" element={<QuizPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
         </Routes>
       </div>
     </BrowserRouter>
