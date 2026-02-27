@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { GoBoard } from '../components/board/GoBoard';
 import { BoardControls } from '../components/board/BoardControls';
 import { MoveProgress } from '../components/board/MoveProgress';
@@ -5,10 +6,25 @@ import { VariationList } from '../components/variation/VariationList';
 import { Card, CardContent } from '@/components/ui/card';
 import { useKifuStore } from '../store/kifuStore';
 import { useBoardStore } from '../store/boardStore';
+import { loadDefaultKifu } from '../data/kifu';
 
 export function HomePage() {
   const currentKifuId = useKifuStore((state) => state.currentKifuId);
   const board = useBoardStore((state) => state.board);
+  const addKifu = useKifuStore((state) => state.addKifu);
+  const loadBoard = useBoardStore((state) => state.loadBoard);
+
+  useEffect(() => {
+    // Only load default kifu if no kifu is currently loaded
+    if (!currentKifuId) {
+      loadDefaultKifu().then((defaultKifu) => {
+        if (defaultKifu) {
+          addKifu(defaultKifu);
+          loadBoard(defaultKifu.boardState);
+        }
+      });
+    }
+  }, [addKifu, loadBoard, currentKifuId]);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">

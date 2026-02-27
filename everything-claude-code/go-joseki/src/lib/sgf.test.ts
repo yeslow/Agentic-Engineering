@@ -324,6 +324,24 @@ describe('SGF Serialization', () => {
       // Should have 4 moves from the first variation
       expect(board.moveHistory.length).toBe(4);
     });
+
+    it('should handle nested format where each move is followed by a variation', () => {
+      // Some SGF files from SGFC have a nested format where each move
+      // is immediately followed by a variation containing the rest of the game
+      // Format: (;FF[4]...;B[pd](;W[dd](;B[qp](;W[dp]...))))
+      const sgf = '(;FF[4]GM[1]SZ[19]AP[SGFC:2.0];B[pd](;W[dd](;B[qp](;W[dp](;B[cc](;W[dc]))))))';
+      const result = sgfToBoard(sgf);
+      const board = result.board;
+
+      // Should have 6 moves chained through the nested variations
+      expect(board.moveHistory.length).toBe(6);
+      expect(board.moveHistory[0].coordinate).toEqual([15, 3]); // B[pd]: p=15, d=3
+      expect(board.moveHistory[1].coordinate).toEqual([3, 3]);  // W[dd]: d=3, d=3
+      expect(board.moveHistory[2].coordinate).toEqual([16, 15]); // B[qp]: q=16, p=15
+      expect(board.moveHistory[3].coordinate).toEqual([3, 15]); // W[dp]: d=3, p=15
+      expect(board.moveHistory[4].coordinate).toEqual([2, 2]);  // B[cc]: c=2, c=2
+      expect(board.moveHistory[5].coordinate).toEqual([3, 2]);  // W[dc]: d=3, c=2
+    });
   });
 });
 

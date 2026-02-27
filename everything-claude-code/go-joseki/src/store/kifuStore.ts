@@ -58,8 +58,32 @@ export const useKifuStore = create<KifuStore>()(
       currentVariationId: null,
 
       addKifu: (kifu) => {
-        const id = generateId();
         const now = new Date().toISOString();
+
+        // Check if a kifu with the same name already exists
+        const existingKifuId = Object.entries(get().kifuList).find(
+          ([, record]) => record.name === kifu.name
+        )?.[0];
+
+        if (existingKifuId) {
+          // Overwrite existing kifu with the same name
+          set((state) => ({
+            kifuList: {
+              ...state.kifuList,
+              [existingKifuId]: {
+                ...kifu,
+                id: existingKifuId,
+                createdAt: state.kifuList[existingKifuId].createdAt,
+                updatedAt: now,
+              },
+            },
+            currentKifuId: existingKifuId,
+          }));
+          return existingKifuId;
+        }
+
+        // Create new kifu
+        const id = generateId();
         set((state) => ({
           kifuList: {
             ...state.kifuList,
@@ -70,7 +94,7 @@ export const useKifuStore = create<KifuStore>()(
               updatedAt: now,
             },
           },
-          currentKifuId: id, // Set newly added kifu as current
+          currentKifuId: id,
         }));
         return id;
       },
@@ -182,6 +206,7 @@ export const useKifuStore = create<KifuStore>()(
       partialize: (state) => ({
         kifuList: state.kifuList,
         variations: state.variations,
+        currentKifuId: state.currentKifuId, // Persist current kifu ID to avoid re-loading on refresh
       }),
     }
   )

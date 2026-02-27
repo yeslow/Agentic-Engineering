@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useBoardStore } from './boardStore';
 import { sgfToBoard } from '../lib/sgf';
-import { sgfToBoard } from '../lib/sgf';
 
 describe('BoardStore Game Mode', () => {
   beforeEach(() => {
@@ -578,7 +577,6 @@ describe('BoardStore Navigation', () => {
       expect(() => store.goToMove(3)).not.toThrow();
 
       // Should be able to go to next move
-      const currentMove = store.currentViewMove;
       expect(() => store.goToNext()).not.toThrow();
     });
 

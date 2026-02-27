@@ -208,6 +208,9 @@ export function sgfToBoard(sgf: string): {
  *
  * Special case: If the main line has no moves but the first variation does,
  * use the first variation as the main line (some SGF files use this format)
+ *
+ * Special case 2: If each move is followed by a variation (nested format),
+ * recursively extract the main line from the first variation chain
  */
 function extractMainLine(sgf: string): string {
   let result = '';
@@ -257,7 +260,86 @@ function extractMainLine(sgf: string): string {
     }
   }
 
+  // Special case 2: If main line has very few moves but first variation has more,
+  // this might be the "nested format" where each move is followed by a variation
+  // In this case, we need to chain through variations to get the full main line
+  if (firstVariationStart !== -1 && firstVariationEnd !== -1) {
+    const firstVariation = sgf.substring(firstVariationStart + 1, firstVariationEnd);
+    const variationMoves = (firstVariation.match(/;([BW])\[([a-y]{2})\]/g) || []).length;
+    const mainLineMoves = (result.match(/;([BW])\[([a-y]{2})\]/g) || []).length;
+
+    // If variation has significantly more moves, use the recursive extraction
+    if (variationMoves > mainLineMoves) {
+      const mainLineMovesInRoot = result.match(/;([BW])\[([a-y]{2})\]/g) || [];
+      const chainedMainLine = extractChainedMainLine(sgf, firstVariationStart, firstVariationEnd);
+      if (chainedMainLine) {
+        // Prepend any moves found in the root node (before the variation)
+        return mainLineMovesInRoot.join('') + chainedMainLine;
+      }
+    }
+  }
+
   return result;
+}
+
+/**
+ * Extract main line from SGF files where each move is followed by a nested variation
+ * This handles the format: (;...;B[aa](;W[bb](;B[cc]...)))
+ * by recursively chaining through the first variation of each node
+ */
+function extractChainedMainLine(sgf: string, varStart: number, varEnd: number): string | null {
+  const moveRegex = /;([BW])\[([a-y]{2})\]/g;
+  let result = '';
+  let currentPos = varStart + 1; // Start after the opening '('
+
+  // Find the first move in the variation
+  moveRegex.lastIndex = currentPos;
+  let moveMatch = moveRegex.exec(sgf);
+
+  if (!moveMatch || moveMatch.index >= varEnd) {
+    return null;
+  }
+
+  // Process moves by chaining through first variations
+  while (moveMatch && moveMatch.index < varEnd) {
+    // Add this move to result
+    const moveEnd = moveMatch.index + moveMatch[0].length;
+    result += sgf.substring(moveMatch.index, moveEnd);
+
+    // Check if there's a variation immediately after this move
+    const afterMove = sgf.substring(moveEnd, Math.min(moveEnd + 2, varEnd));
+    if (afterMove.startsWith('(;')) {
+      // Find the matching closing paren for this variation
+      let parenDepth = 0;
+      let varEndPos = moveEnd;
+      for (let i = moveEnd; i < varEnd; i++) {
+        if (sgf[i] === '(') parenDepth++;
+        if (sgf[i] === ')') {
+          parenDepth--;
+          if (parenDepth === 0) {
+            varEndPos = i;
+            break;
+          }
+        }
+      }
+
+      // Move into the first variation and continue
+      // Find the next move within this variation
+      moveRegex.lastIndex = moveEnd + 1;
+      moveMatch = moveRegex.exec(sgf);
+
+      if (!moveMatch || moveMatch.index >= varEndPos) {
+        break;
+      }
+
+      // Update search boundaries for next iteration
+      varEnd = varEndPos;
+    } else {
+      break;
+    }
+  }
+
+  return result.length > 0 ? result : null;
 }
 
 /**

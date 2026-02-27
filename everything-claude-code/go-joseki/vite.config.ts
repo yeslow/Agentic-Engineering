@@ -32,4 +32,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
   },
+  // Treat .sgf files as raw text
+  assetsInclude: ['**/*.sgf'],
 })
