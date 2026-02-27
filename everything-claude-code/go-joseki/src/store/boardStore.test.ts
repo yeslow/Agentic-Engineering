@@ -636,14 +636,14 @@ describe('Trial Mode Progress Bar', () => {
   });
 
   describe('exitTrialMode - restoring progress', () => {
-    it('should restore currentViewMove to last board move when exiting trial mode', () => {
+    it('should restore to entry move when exiting trial mode', () => {
       const store = useBoardStore.getState();
       store.initBoard(19);
       store.playMove([3, 3]);
       store.playMove([15, 15]);
       store.playMove([3, 15]);
 
-      // Go back to middle
+      // Go back to move 1 and enter trial mode
       store.goToMove(1);
       store.enterTrialMode();
 
@@ -654,8 +654,59 @@ describe('Trial Mode Progress Bar', () => {
       // Exit trial mode
       store.exitTrialMode();
 
-      // Should restore to last board move
-      expect(useBoardStore.getState().currentViewMove).toBe(3);
+      // Should restore to entry move (1), not last board move (3)
+      expect(useBoardStore.getState().currentViewMove).toBe(1);
+    });
+
+    it('should restore board state to entry move when exiting trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]); // move 1
+      store.playMove([15, 15]); // move 2
+      store.playMove([3, 15]); // move 3
+
+      // Go back to move 1 and enter trial mode
+      store.goToMove(1);
+      store.enterTrialMode();
+
+      // Play some trial moves
+      store.playTrialMove([10, 10]);
+      store.playTrialMove([10, 11]);
+
+      // Exit trial mode
+      store.exitTrialMode();
+
+      // Board should show only move 1 (black stone at [3,3])
+      const state = useBoardStore.getState();
+      expect(state.board.stones.black).toHaveLength(1);
+      expect(state.board.stones.black).toContainEqual([3, 3]);
+      expect(state.board.stones.white).toHaveLength(0);
+      expect(state.board.currentMoveNumber).toBe(1);
+    });
+
+    it('should update progress bar to entry move when exiting trial mode', () => {
+      const store = useBoardStore.getState();
+      store.initBoard(19);
+      store.playMove([3, 3]);
+      store.playMove([15, 15]);
+      store.playMove([3, 15]);
+
+      // Go back to move 2 and enter trial mode
+      store.goToMove(2);
+      store.enterTrialMode();
+
+      // Play some trial moves
+      store.playTrialMove([10, 10]);
+
+      // Exit trial mode
+      store.exitTrialMode();
+
+      // Progress bar should show entry move (2)
+      const state = useBoardStore.getState();
+      expect(state.currentViewMove).toBe(2);
+      expect(state.board.currentMoveNumber).toBe(2);
+      expect(state.getTotalMoves()).toBe(3); // Total board moves
+      expect(state.getCurrentTrialMoveIndex()).toBe(2); // Current position
     });
 
     it('should clear trial move history when exiting', () => {

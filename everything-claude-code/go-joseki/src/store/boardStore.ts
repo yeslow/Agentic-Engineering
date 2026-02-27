@@ -360,23 +360,22 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   },
 
   exitTrialMode: () => {
-    const { board } = get();
-    // Return to the last move on the board when exiting trial mode
-    const lastBoardMove = board.moveHistory.length;
+    const { trialModeEntryMove, board } = get();
+    // Return to the entry move when exiting trial mode
     set({
       gameMode: 'battle',
       trialStones: { black: [], white: [] },
       trialMoveCount: 0,
       trialCapturedStones: { black: [], white: [] },
       trialKoPoint: null,
-      currentViewMove: lastBoardMove,
+      currentViewMove: trialModeEntryMove,
       trialModeEntryMove: 0,
       trialMoveHistory: [],
       trialRedoStack: [],
-      // Update board.currentMoveNumber to match the last board move
+      // Update board.currentMoveNumber to match the entry move
       board: {
         ...board,
-        currentMoveNumber: lastBoardMove,
+        currentMoveNumber: trialModeEntryMove,
       },
     });
   },
