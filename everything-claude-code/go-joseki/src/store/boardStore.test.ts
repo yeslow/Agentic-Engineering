@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useBoardStore } from './boardStore';
+import { useKifuStore } from './kifuStore';
 import { sgfToBoard } from '../lib/sgf';
 
 describe('BoardStore Game Mode', () => {
@@ -1017,3 +1018,458 @@ describe('Trial Mode Progress Bar', () => {
     });
   });
 });
+
+describe('Blank Board Move Placement - New Feature', () => {
+  beforeEach(() => {
+    // Reset both stores to initial state
+    useBoardStore.getState().initBoard(19);
+    useKifuStore.getState().setCurrentKifuId(null);
+  });
+
+  describe('Initial State', () => {
+    it('should start with blank board state (no kifu loaded)', () => {
+      const { board } = useBoardStore.getState();
+      const { currentKifuId } = useKifuStore.getState();
+
+      expect(currentKifuId).toBeNull();
+      expect(board.moveHistory).toHaveLength(0);
+      expect(board.stones.black).toHaveLength(0);
+      expect(board.stones.white).toHaveLength(0);
+    });
+
+    it('should have gameMode as battle initially', () => {
+      const { gameMode } = useBoardStore.getState();
+      expect(gameMode).toBe('battle');
+    });
+  });
+
+  describe('Move Placement on Blank Board', () => {
+    it('should play first move as black on blank board', () => {
+      const { playMove } = useBoardStore.getState();
+
+      const result = playMove([3, 3]);
+
+      expect(result).toBe(true);
+      const { board, currentColor } = useBoardStore.getState();
+      expect(board.stones.black).toContainEqual([3, 3]);
+      expect(currentColor).toBe('white'); // Next color should be white
+    });
+
+    it('should alternate colors for subsequent moves on blank board', () => {
+      const { playMove } = useBoardStore.getState();
+
+      playMove([3, 3]); // Black
+      playMove([4, 4]); // White
+      playMove([5, 5]); // Black
+
+      const { board } = useBoardStore.getState();
+      expect(board.stones.black).toHaveLength(2);
+      expect(board.stones.white).toHaveLength(1);
+      expect(board.stones.black).toContainEqual([3, 3]);
+      expect(board.stones.black).toContainEqual([5, 5]);
+      expect(board.stones.white).toContainEqual([4, 4]);
+    });
+
+    it('should add moves to moveHistory on blank board', () => {
+      const { playMove } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      playMove([4, 4]);
+
+      const { board } = useBoardStore.getState();
+      expect(board.moveHistory).toHaveLength(2);
+      expect(board.moveHistory[0]).toMatchObject({ coordinate: [3, 3], color: 'black' });
+      expect(board.moveHistory[1]).toMatchObject({ coordinate: [4, 4], color: 'white' });
+    });
+
+    it('should update currentViewMove when playing moves on blank board', () => {
+      const { playMove } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      expect(useBoardStore.getState().currentViewMove).toBe(1);
+
+      playMove([4, 4]);
+      expect(useBoardStore.getState().currentViewMove).toBe(2);
+    });
+  });
+
+  describe('Undo on Blank Board', () => {
+    it('should remove last move from history when undoing on blank board', () => {
+      const { playMove, undo } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      playMove([4, 4]);
+      undo();
+
+      const { board } = useBoardStore.getState();
+      expect(board.moveHistory).toHaveLength(1);
+      expect(board.stones.black).toContainEqual([3, 3]);
+      expect(board.stones.white).toHaveLength(0);
+    });
+
+    it('should update currentViewMove after undo on blank board', () => {
+      const { playMove, undo } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      playMove([4, 4]);
+      expect(useBoardStore.getState().currentViewMove).toBe(2);
+
+      undo();
+      expect(useBoardStore.getState().currentViewMove).toBe(1);
+    });
+
+    it('should allow continuing moves after undo on blank board', () => {
+      const { playMove, undo } = useBoardStore.getState();
+
+      playMove([3, 3]); // Black
+      playMove([4, 4]); // White
+      undo(); // Undo white's move
+
+      // Continue playing - should work normally
+      // After undoing white's move, it should be white's turn again
+      const result = playMove([5, 5]);
+      expect(result).toBe(true);
+
+      const { board } = useBoardStore.getState();
+      expect(board.moveHistory).toHaveLength(2);
+      expect(board.stones.black).toHaveLength(1); // [3,3]
+      expect(board.stones.white).toHaveLength(1); // [5,5] (replaces undone [4,4])
+    });
+
+    it('should stay in battle mode after undo on blank board', () => {
+      const { playMove, undo } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      playMove([4, 4]);
+      undo();
+
+      const { gameMode } = useBoardStore.getState();
+      expect(gameMode).toBe('battle');
+    });
+
+    it('should alternate colors correctly after undo on blank board', () => {
+      const { playMove, undo } = useBoardStore.getState();
+
+      playMove([3, 3]); // Black
+      playMove([4, 4]); // White
+      undo(); // Undo white
+
+      // After undo, it should be white's turn again
+      const { currentColor } = useBoardStore.getState();
+      expect(currentColor).toBe('white');
+
+      // Play again should be white
+      playMove([5, 5]);
+      const { board } = useBoardStore.getState();
+      expect(board.stones.white).toContainEqual([5, 5]);
+    });
+  });
+
+  describe('Trial Mode Logic on Blank Board', () => {
+    it('should NOT enter trial mode when board has stones but no kifu is loaded', () => {
+      // This tests the key behavior: blank board should never enter trial mode
+      const { playMove } = useBoardStore.getState();
+      const { currentKifuId } = useKifuStore.getState();
+
+      // Verify no kifu is loaded (blank board)
+      expect(currentKifuId).toBeNull();
+
+      // Play some moves
+      playMove([3, 3]);
+      playMove([4, 4]);
+
+      // Should still be in battle mode
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+    });
+
+    it('should stay in battle mode when continuing moves after undo on blank board', () => {
+      const { playMove, undo } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      playMove([4, 4]);
+      undo();
+
+      // Continue playing
+      playMove([5, 5]);
+
+      // Should still be in battle mode
+      expect(useBoardStore.getState().gameMode).toBe('battle');
+    });
+  });
+
+  describe('Saved Kifu Behavior', () => {
+    it('should track when a kifu is loaded', () => {
+      // Simulate loading a saved kifu
+      useKifuStore.getState().setCurrentKifuId('test-kifu-id');
+
+      const { currentKifuId } = useKifuStore.getState();
+      expect(currentKifuId).toBe('test-kifu-id');
+    });
+
+    it('should distinguish between blank board and saved kifu', () => {
+      // Blank board
+      expect(useKifuStore.getState().currentKifuId).toBeNull();
+
+      // Load a kifu
+      useKifuStore.getState().setCurrentKifuId('saved-kifu');
+      expect(useKifuStore.getState().currentKifuId).not.toBeNull();
+    });
+  });
+});
+
+describe('Board Store - isBlankBoard helper logic', () => {
+  beforeEach(() => {
+    useBoardStore.getState().initBoard(19);
+    useKifuStore.getState().setCurrentKifuId(null);
+  });
+
+  it('should identify blank board when currentKifuId is null', () => {
+    const { currentKifuId } = useKifuStore.getState();
+    const isBlankBoard = !currentKifuId;
+    expect(isBlankBoard).toBe(true);
+  });
+
+  it('should identify saved kifu when currentKifuId is set', () => {
+    useKifuStore.getState().setCurrentKifuId('some-kifu-id');
+    const { currentKifuId } = useKifuStore.getState();
+    const isBlankBoard = !currentKifuId;
+    expect(isBlankBoard).toBe(false);
+  });
+});
+
+describe('Board Store - isAtLatestMove logic', () => {
+  beforeEach(() => {
+    useBoardStore.getState().initBoard(19);
+    useKifuStore.getState().setCurrentKifuId(null);
+  });
+
+  it('should be at latest move when currentViewMove equals moveHistory length', () => {
+    const { playMove } = useBoardStore.getState();
+
+    playMove([3, 3]);
+    playMove([4, 4]);
+
+    const { currentViewMove, board } = useBoardStore.getState();
+    const isAtLatestMove = currentViewMove >= board.moveHistory.length;
+
+    expect(isAtLatestMove).toBe(true);
+  });
+
+  it('should NOT be at latest move when currentViewMove is less than moveHistory length', () => {
+    const { playMove, goToMove } = useBoardStore.getState();
+
+    playMove([3, 3]);
+    playMove([4, 4]);
+    playMove([5, 5]);
+
+    // Go back to move 1
+    goToMove(1);
+
+    const { currentViewMove, board } = useBoardStore.getState();
+    const isAtLatestMove = currentViewMove >= board.moveHistory.length;
+
+    expect(isAtLatestMove).toBe(false);
+    expect(currentViewMove).toBe(1);
+    expect(board.moveHistory.length).toBe(3);
+  });
+});
+
+describe('Board Store - Truncate on blank board', () => {
+  beforeEach(() => {
+    useBoardStore.getState().initBoard(19);
+    useKifuStore.getState().setCurrentKifuId(null);
+  });
+
+  describe('goToMove with shouldTruncate', () => {
+    it('should truncate move history when shouldTruncate is true', () => {
+      const { playMove, goToMove } = useBoardStore.getState();
+
+      // Play 5 moves
+      playMove([3, 3]); // 1
+      playMove([4, 4]); // 2
+      playMove([5, 5]); // 3
+      playMove([6, 6]); // 4
+      playMove([7, 7]); // 5
+
+      expect(useBoardStore.getState().board.moveHistory.length).toBe(5);
+
+      // Truncate to move 2
+      goToMove(2, true);
+
+      const { board, currentViewMove } = useBoardStore.getState();
+      expect(board.moveHistory.length).toBe(2);
+      expect(currentViewMove).toBe(2);
+      expect(board.currentMoveNumber).toBe(2);
+    });
+
+    it('should NOT truncate move history when shouldTruncate is false', () => {
+      const { playMove, goToMove } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      playMove([4, 4]);
+      playMove([5, 5]);
+
+      // Navigate without truncation
+      goToMove(1, false);
+
+      const { board, currentViewMove } = useBoardStore.getState();
+      expect(board.moveHistory.length).toBe(3); // History preserved
+      expect(currentViewMove).toBe(1); // But viewing move 1
+    });
+
+    it('should allow continuing play after truncate', () => {
+      const { playMove, goToMove } = useBoardStore.getState();
+
+      playMove([3, 3]); // Black 1
+      playMove([4, 4]); // White 2
+      playMove([5, 5]); // Black 3
+
+      // Truncate to move 1
+      goToMove(1, true);
+
+      const stateBefore = useBoardStore.getState();
+      expect(stateBefore.board.moveHistory.length).toBe(1);
+      expect(stateBefore.currentColor).toBe('white'); // White's turn
+
+      // Continue playing
+      playMove([10, 10]); // White 2
+
+      const stateAfter = useBoardStore.getState();
+      expect(stateAfter.board.moveHistory.length).toBe(2);
+      expect(stateAfter.board.stones.white).toContainEqual([10, 10]);
+    });
+
+    it('should reset to empty board when truncating to move 0', () => {
+      const { playMove, goToMove } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      playMove([4, 4]);
+
+      goToMove(0, true);
+
+      const { board, currentViewMove } = useBoardStore.getState();
+      expect(board.moveHistory.length).toBe(0);
+      expect(board.stones.black.length).toBe(0);
+      expect(board.stones.white.length).toBe(0);
+      expect(currentViewMove).toBe(0);
+    });
+  });
+
+  describe('goToPrevious with shouldTruncate', () => {
+    it('should truncate when shouldTruncate is true', () => {
+      const { playMove, goToPrevious } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      playMove([4, 4]);
+      playMove([5, 5]);
+
+      // Truncate backward
+      goToPrevious(true);
+
+      const { board, currentViewMove } = useBoardStore.getState();
+      expect(board.moveHistory.length).toBe(2);
+      expect(currentViewMove).toBe(2);
+    });
+
+    it('should NOT truncate when shouldTruncate is false', () => {
+      const { playMove, goToPrevious } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      playMove([4, 4]);
+      playMove([5, 5]);
+
+      // Navigate backward without truncation
+      goToPrevious(false);
+
+      const { board, currentViewMove } = useBoardStore.getState();
+      expect(board.moveHistory.length).toBe(3); // History preserved
+      expect(currentViewMove).toBe(2);
+    });
+
+    it('should not go below move 0 when truncating', () => {
+      const { playMove, goToPrevious } = useBoardStore.getState();
+
+      playMove([3, 3]);
+
+      goToPrevious(true); // To move 0
+      goToPrevious(true); // Should stay at move 0
+
+      const { board, currentViewMove } = useBoardStore.getState();
+      expect(board.moveHistory.length).toBe(0);
+      expect(currentViewMove).toBe(0);
+    });
+  });
+
+  describe('truncate behavior with saved kifu', () => {
+    it('should truncate new moves after saving kifu when at latest move', () => {
+      // Simulate: save kifu, then play more moves (unsaved)
+      useKifuStore.getState().setCurrentKifuId('saved-kifu');
+      const { playMove, goToPrevious } = useBoardStore.getState();
+
+      // Original saved moves
+      playMove([3, 3]);
+      playMove([4, 4]);
+
+      // New unsaved moves (at latest)
+      playMove([5, 5]);
+      playMove([6, 6]);
+
+      const stateBefore = useBoardStore.getState();
+      expect(stateBefore.board.moveHistory.length).toBe(4);
+      expect(stateBefore.currentViewMove).toBe(4); // At latest
+
+      // Truncate backward - should delete the unsaved moves
+      goToPrevious(true);
+
+      const stateAfter = useBoardStore.getState();
+      expect(stateAfter.board.moveHistory.length).toBe(3);
+      expect(stateAfter.currentViewMove).toBe(3);
+    });
+
+    it('should NOT truncate when viewing history (not at latest)', () => {
+      useKifuStore.getState().setCurrentKifuId('saved-kifu');
+      const { playMove, goToMove, goToPrevious } = useBoardStore.getState();
+
+      playMove([3, 3]);
+      playMove([4, 4]);
+      playMove([5, 5]);
+
+      // Go back to view history (not at latest)
+      goToMove(1);
+
+      const stateBefore = useBoardStore.getState();
+      expect(stateBefore.currentViewMove).toBe(1);
+      expect(stateBefore.board.moveHistory.length).toBe(3);
+
+      // Navigate back without truncation
+      goToPrevious(false);
+
+      const stateAfter = useBoardStore.getState();
+      expect(stateAfter.board.moveHistory.length).toBe(3); // Preserved
+      expect(stateAfter.currentViewMove).toBe(0);
+    });
+
+    it('should allow continuing play after truncating unsaved moves', () => {
+      useKifuStore.getState().setCurrentKifuId('saved-kifu');
+      const { playMove, goToPrevious } = useBoardStore.getState();
+
+      playMove([3, 3]); // Saved move 1
+      playMove([4, 4]); // Saved move 2
+      playMove([5, 5]); // Unsaved move 3
+
+      // Truncate the unsaved move
+      goToPrevious(true);
+
+      const stateAfterTruncate = useBoardStore.getState();
+      expect(stateAfterTruncate.board.moveHistory.length).toBe(2);
+
+      // Continue playing from truncated position
+      playMove([10, 10]); // New move 3
+
+      const stateAfter = useBoardStore.getState();
+      expect(stateAfter.board.moveHistory.length).toBe(3);
+      expect(stateAfter.board.stones.black).toContainEqual([10, 10]);
+    });
+  });
+});
+

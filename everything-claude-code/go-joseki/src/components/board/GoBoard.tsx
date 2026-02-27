@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useBoardStore } from '../../store/boardStore';
+import { useKifuStore } from '../../store/kifuStore';
 import {
   calculateBoardDimensions,
   coordinateToPixel,
@@ -183,6 +184,9 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
     trialMoveHistory,
   ]);
 
+  // Get kifu store state for determining blank board vs saved kifu
+  const { currentKifuId } = useKifuStore();
+
   // Handle click
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -198,20 +202,31 @@ export function GoBoard({ size = 600, className = '' }: GoBoardProps) {
 
       if (!coord) return;
 
+      // Determine if this is a blank board (no saved kifu loaded)
+      const isBlankBoard = !currentKifuId;
+
+      // Get current view move from board store
+      const { currentViewMove, board: currentBoard } = useBoardStore.getState();
+
+      // Determine if we're at the latest move
+      const isAtLatestMove = currentViewMove >= currentBoard.moveHistory.length;
+
       // In trial mode, continue playing trial moves
       if (gameMode === 'trial') {
         playTrialMove(coord);
+      } else if (isBlankBoard) {
+        // Blank board: always play normal moves (never enter trial mode)
+        playMove(coord);
+      } else if (isAtLatestMove) {
+        // Saved kifu at latest move: play normal moves
+        playMove(coord);
       } else {
-        // Battle mode: only enter trial mode if there are stones on the board
-        // If board is empty (no kifu loaded), do nothing
-        const hasBoardStones = board.stones.black.length > 0 || board.stones.white.length > 0;
-        if (hasBoardStones) {
-          enterTrialMode();
-          playTrialMove(coord);
-        }
+        // Saved kifu viewing history: enter trial mode
+        enterTrialMode();
+        playTrialMove(coord);
       }
     },
-    [board.size, board.stones, gameMode, enterTrialMode, playTrialMove, size]
+    [board.size, gameMode, enterTrialMode, playTrialMove, playMove, size, currentKifuId]
   );
 
   // Handle mouse move

@@ -53,8 +53,8 @@ interface BoardStore {
     trialMoveHistory?: TrialMove[]
   ) => void;
   canPlayAt: (coord: Coordinate) => boolean;
-  goToMove: (index: number) => void;
-  goToPrevious: () => void;
+  goToMove: (index: number, shouldTruncate?: boolean) => void;
+  goToPrevious: (shouldTruncate?: boolean) => void;
   goToNext: () => void;
   goToLastMove: () => void;
   getTotalMoves: () => number;
@@ -512,7 +512,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     });
   },
 
-  goToMove: (index: number) => {
+  goToMove: (index: number, shouldTruncate = false) => {
     const { board, gameMode, trialModeEntryMove, trialMoveHistory } = get();
     const targetIndex = Math.max(0, Math.min(index, board.moveHistory.length + trialMoveHistory.length));
 
@@ -584,7 +584,46 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       return;
     }
 
-    // Battle mode - original behavior
+    // Battle mode - check if we should truncate (for blank board)
+    if (shouldTruncate && targetIndex < board.moveHistory.length) {
+      // Truncate mode: actually delete moves after targetIndex
+      const truncatedHistory = board.moveHistory.slice(0, targetIndex);
+      const newBoard = createInitialBoard(board.size);
+      let tempBoard = newBoard;
+      let successfulMoves = 0;
+
+      for (const move of truncatedHistory) {
+        try {
+          tempBoard = placeStone(tempBoard, move.coordinate, move.color);
+          successfulMoves++;
+        } catch (e) {
+          console.warn('Skipping invalid move during truncate:', move, e);
+        }
+      }
+
+      const currentColor = successfulMoves % 2 === 0 ? 'black' : 'white';
+
+      set({
+        board: {
+          ...tempBoard,
+          moveHistory: truncatedHistory, // Truncated history
+          currentMoveNumber: successfulMoves,
+        },
+        currentColor,
+        currentViewMove: successfulMoves,
+        isViewingMode: false, // Not viewing since we truncated
+        gameMode: 'battle',
+        trialStones: { black: [], white: [] },
+        trialMoveCount: 0,
+        trialCapturedStones: { black: [], white: [] },
+        trialKoPoint: null,
+        trialModeEntryMove: 0,
+        trialMoveHistory: [],
+      });
+      return;
+    }
+
+    // Normal navigation mode (saved kifu or no truncation needed)
     const newBoard = createInitialBoard(board.size);
     let tempBoard = newBoard;
     let successfulMoves = 0; // Track actual successful moves
@@ -626,7 +665,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     });
   },
 
-  goToPrevious: () => {
+  goToPrevious: (shouldTruncate = false) => {
     const { currentViewMove, gameMode, trialModeEntryMove, trialMoveCount } = get();
     if (gameMode === 'trial') {
       // In trial mode, use current trial move index
@@ -634,7 +673,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       if (currentIndex > 0) {
         if (currentIndex < trialModeEntryMove) {
           // Navigate board history (only if we've already navigated back in board)
-          get().goToMove(currentIndex - 1);
+          get().goToMove(currentIndex - 1, shouldTruncate);
         } else if (currentIndex > trialModeEntryMove) {
           // Remove trial moves
           get().undoTrialMove();
@@ -643,7 +682,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       }
     } else {
       if (currentViewMove > 0) {
-        get().goToMove(currentViewMove - 1);
+        get().goToMove(currentViewMove - 1, shouldTruncate);
       }
     }
   },

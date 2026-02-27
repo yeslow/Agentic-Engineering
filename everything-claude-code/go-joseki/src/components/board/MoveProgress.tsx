@@ -27,11 +27,36 @@ export function MoveProgress({ compact = false }: MoveProgressProps) {
     trialRedoStack,
     redoTrialMove,
   } = useBoardStore();
-  const { setCurrentVariationId } = useKifuStore();
+  const { setCurrentVariationId, currentKifuId, getKifu } = useKifuStore();
+
+  // Get the saved move count from current kifu (if any)
+  const savedMoveCount = useMemo(() => {
+    if (!currentKifuId) return 0;
+    const kifu = getKifu(currentKifuId);
+    return kifu?.moveCount || 0;
+  }, [currentKifuId, getKifu]);
+
+  // Determine if we are at the latest move (not viewing history)
+  // If at latest move, going back should truncate (delete the move)
+  // If viewing history, going back just navigates without truncating
+  const isAtLatestMove = currentViewMove >= board.moveHistory.length;
+
+  // Calculate the minimum allowed position for truncation
+  // Cannot truncate below savedMoveCount (to preserve saved history)
+  const minTruncateIndex = savedMoveCount;
 
   // Calculate total moves and current position
   const totalMoves = getTotalMoves();
   const currentMoveIndex = currentViewMove;
+
+  // Helper to determine if we should truncate when going to a target index
+  // Only truncate if:
+  // 1. We are at the latest move (have been playing new moves)
+  // 2. Target is before current position
+  // 3. Target is at or above the saved move count (don't truncate saved history)
+  const shouldTruncateTo = (targetIndex: number) => {
+    return isAtLatestMove && targetIndex < currentMoveIndex && targetIndex >= minTruncateIndex;
+  };
 
   // Get move at current position for display
   const currentMove = useMemo(() => {
@@ -50,7 +75,9 @@ export function MoveProgress({ compact = false }: MoveProgressProps) {
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        goToPrevious();
+        // Truncate if going to a valid truncate position
+        const targetIndex = Math.max(0, currentMoveIndex - 1);
+        goToPrevious(shouldTruncateTo(targetIndex));
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         if (gameMode === 'trial') {
@@ -61,7 +88,8 @@ export function MoveProgress({ compact = false }: MoveProgressProps) {
         }
       } else if (e.key === 'Home') {
         e.preventDefault();
-        goToMove(0);
+        // Truncate if going to a valid truncate position (not below saved count)
+        goToMove(0, shouldTruncateTo(0));
       } else if (e.key === 'End') {
         e.preventDefault();
         goToLastMove();
@@ -70,7 +98,7 @@ export function MoveProgress({ compact = false }: MoveProgressProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [totalMoves, gameMode, goToMove, goToPrevious, goToNext, goToLastMove, redoTrialMove]);
+  }, [totalMoves, gameMode, goToMove, goToPrevious, goToNext, goToLastMove, redoTrialMove, isAtLatestMove, currentMoveIndex, minTruncateIndex]);
 
   return (
     <Card className={compact ? 'shadow-lg' : 'shadow-xl'}>
@@ -104,7 +132,9 @@ export function MoveProgress({ compact = false }: MoveProgressProps) {
               max={totalMoves}
               step={1}
               onValueChange={(value) => {
-                goToMove(value[0]);
+                // Truncate only if going to a valid position (not below saved count)
+                const targetIndex = value[0];
+                goToMove(targetIndex, shouldTruncateTo(targetIndex));
               }}
               disabled={totalMoves === 0}
               className="w-full"
@@ -117,7 +147,7 @@ export function MoveProgress({ compact = false }: MoveProgressProps) {
               <Button
                 variant="outline"
                 size={compact ? 'sm' : 'default'}
-                onClick={() => goToMove(0)}
+                onClick={() => goToMove(0, shouldTruncateTo(0))}
                 disabled={currentMoveIndex === 0 || totalMoves === 0}
                 title="跳到开始"
                 className={cn("h-7 w-7 sm:h-8 sm:w-8", compact && 'h-6 w-6 sm:h-7 sm:w-7')}
@@ -127,7 +157,10 @@ export function MoveProgress({ compact = false }: MoveProgressProps) {
               <Button
                 variant="outline"
                 size={compact ? 'sm' : 'default'}
-                onClick={goToPrevious}
+                onClick={() => {
+                  const targetIndex = Math.max(0, currentMoveIndex - 1);
+                  goToPrevious(shouldTruncateTo(targetIndex));
+                }}
                 disabled={currentMoveIndex === 0 || totalMoves === 0}
                 title="后退一手"
                 className={cn("h-7 w-7 sm:h-8 sm:w-8", compact && 'h-6 w-6 sm:h-7 sm:w-7')}
